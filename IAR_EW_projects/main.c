@@ -1,3 +1,4 @@
+//изменения в main.c для коммита
 #include <stdio.h>
 #include "CMSIS/stm32f4xx.h"
 
