@@ -1,6 +1,5 @@
 #include "spi.h"
 
-#define SPI_SR_FREE (0 << 7)
 static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t flag, uint32_t timeout)       //Ожидание установки флага состояния SR
 {
     uint32_t start_time = get_current_time();
@@ -87,49 +86,3 @@ SPI_Status_t SPI_Receive(SPI_TypeDef* SPIx, uint8_t* data, uint32_t size)       
 	}
     return SPI_OK;
 }
-
-
-
-/////////////////////////доработать статусы ошибок
-/*SPI_Status_t SPI_Transmit(SPI_TypeDef* SPIx, uint8_t* data, uint32_t size)      //отправить по SPI
-{
-    for(uint32_t i = 0; i < size; i++)
-    {
-        //Wait until TXE is set
-		while(!(SPIx->SR & (SPI_SR_TXE))){}
-
-		//Write the data to the data register
-		SPIx->DR = data[i];
-    }
-
-	//Wait until TXE is set
-	while(!(SPIx->SR & (SPI_SR_TXE))){}
-
-	//Wait for BUSY flag to reset
-	while((SPIx->SR & (SPI_SR_BSY))){}
-
-	//Clear OVR flag
-	(void)SPIx->DR;
-	(void)SPIx->SR;
-
-    return SPI_OK;
-}
-*/
-/*SPI_Status_t SPI_Receive(SPI_TypeDef* SPIx, uint8_t* data, uint32_t size)       //принять по SPI
-{
-    while(size)
-	{
-		SPIx->DR =1;    //Send dummy data
-
-		//Wait for RXNE flag to be set
-		while(!(SPIx->SR & (SPI_SR_RXNE))){}
-
-		//Read data from data register
-		*data++ = (SPIx->DR);
-		size--;
-	}
-    return SPI_OK;
-}*/
-
-
-
