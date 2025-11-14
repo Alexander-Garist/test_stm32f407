@@ -1,6 +1,13 @@
+/**
+  * @file    i2c.c
+  * @brief   Файл содержит реализации функций I2C
+  */
+
+/* Includes ------------------------------------------------------------------*/
 #include <stdio.h>
 #include "i2c.h"
 
+/********************** Статические функции ***********************************/
 static void I2C_RCC_Enable(I2C_TypeDef* I2Cx)   //Включение тактирования порта I2C (1,2 или 3)
 {
     uint32_t Address_Shift = (uint32_t)I2Cx - (uint32_t)I2C1;   //Расчет сдвига порта от I2C1_BASE
@@ -129,66 +136,6 @@ I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uin
     //запрос на чтение
     if(I2C_Wait_Bus_Busy(I2Cx, 10) != I2C_OK) return I2C_BUS_IS_BUSY;          //Ожидание освобождения шины I2C, шина освобождается после генерации состояния STOP на шине
     if(I2C_Start(I2Cx, device_addr, 1) != I2C_OK) return I2C_ERROR_START;       //Старт для чтения
-
-    if(size > 1){
-        I2Cx->CR1 |= I2C_CR1_ACK;        //Чтение нескольких байт, Acknowledge Enable
-    }
-    else{
-        I2Cx->CR1 &= ~I2C_CR1_ACK;      //Одиночное чтение, сброс Acknowledge Disable
-    }
-    (void)I2Cx->SR2;
-
-    for(uint16_t i = 0; i < size; i++)
-    {
-        if(i == size - 1)       //При чтении последнего байта нужно сбросить флаг ACK и остановить прием данных
-        {
-            I2Cx->CR1 &= ~I2C_CR1_ACK;
-            I2C_Stop(I2Cx);
-        }
-        I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_RXNE, 10);
-        data[i] = I2Cx->DR;
-    }
-    return I2C_OK;
-}
-///////////////////
-I2C_Status_t I2C_Write_MEMORY(I2C_TypeDef* I2Cx, uint8_t device_addr, uint16_t reg_addr, uint8_t* data, uint16_t size)        //Запись в память
-{
-    if(I2C_Wait_Bus_Busy(I2Cx, 100) != I2C_OK) return I2C_BUS_IS_BUSY;               //Ожидание освобождения шины I2C, шина освобождается после генерации состояния STOP на шине
-    if(I2C_Start(I2Cx, device_addr, 0) != I2C_OK) return I2C_ERROR_START;       //Генерация состояния START и отправка запроса на запись подключенному устройству
-
-    //Отправка 2 8-битных слов адреса
-    I2Cx->DR = (reg_addr >> 8) & 0xFF;      //старший байт адреса
-    I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_TXE, 10);
-
-    I2Cx->DR = reg_addr & 0xFF;             //младший байт адреса
-    I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_TXE, 10);
-
-    //Отправка данных
-    for(uint16_t i = 0; i < size; i++)
-    {
-        I2Cx->DR = data[i];
-        I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_TXE, 10);
-    }
-
-    I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_BTF, 10);
-    I2C_Stop(I2Cx);
-    delay_ms(10);
-    return I2C_OK;
-}
-I2C_Status_t I2C_Read_MEMORY(I2C_TypeDef* I2Cx, uint8_t device_addr, uint16_t reg_addr, uint8_t* data, uint16_t size)         //Чтение из памяти
-{
-    if(data == NULL) return I2C_DATA_NULL;
-    if(I2C_Wait_Bus_Busy(I2Cx, 100) != I2C_OK) return I2C_BUS_IS_BUSY;          //Ожидание освобождения шины I2C, шина освобождается после генерации состояния STOP на шине
-    if(I2C_Start(I2Cx, device_addr, 0) != I2C_OK) return I2C_ERROR_START;       //Генерация состояния START и отправка запроса на запись подключенному устройству
-                                                                                //(сначала запись, т.к. нужно отправить адрес, с которого нужно считывать данные)
-    //Отправка 2 8-битных слов адреса
-    I2Cx->DR = (reg_addr >> 8) & 0xFF;      //старший байт адреса
-    I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_TXE, 10);
-
-    I2Cx->DR = reg_addr & 0xFF;             //младший байт адреса
-    I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_BTF, 10);
-
-    if(I2C_Start(I2Cx, device_addr, 1) != I2C_OK) return I2C_ERROR_START;       //Повторный старт для чтения
 
     if(size > 1){
         I2Cx->CR1 |= I2C_CR1_ACK;        //Чтение нескольких байт, Acknowledge Enable
