@@ -1,46 +1,45 @@
+/**
+  * @file    systick.c
+  * @brief   Файл содержит реализации функций системного таймера SysTick
+  */
+
+/* Includes ------------------------------------------------------------------*/
 #include "systick.h"
 
-volatile uint32_t systick_counter = 0;      //Счетчик вызовов SysTick_Handler()
+volatile uint32_t systick_counter = 0;      // Счетчик вызовов SysTick_Handler()
 
-//Статические функции, нужны для сокрытия их реализации в других модулях
-static void SysTick_init(uint32_t freq)                                     //Инициализация SysTick
+/************************* Глобальные функции *********************************/
+
+void SysTick_Init(uint32_t frequency, uint32_t ms_one_interrupt)
 {
-    SysTick->CTRL = 0;  //Начальное обнуление
-    SysTick->LOAD = (SystemCoreClock / 1000) * freq - 1;  //аргумент freq - желаемый интервал генерации прерывания SysTick_Handler() в миллисекундах
-                                                    //например SysTick_init(10); означает, что каждые 10 мс будет вызываться SysTick_Handler()
-    SysTick->VAL = 0;   //Начальное обнуление
+    SysTick->CTRL = 0;															// Начальное обнуление регистра управления и статуса
+    SysTick->LOAD = (frequency / 1000) * ms_one_interrupt - 1;					// Регистр предзагрузки, устанавливается значение для перезагрузки при обнулении
+    SysTick->VAL = 0;															// Начальное обнуление счетного регистра
 
-    SysTick->CTRL |= (1 << 2)       //Выбор clock source
-        |(1 << 1)                   //Разрешение вызывать обработчик прерывания SysTick_Handler() при достижении 0 в счетчике
-        |(1 << 0);                  //ENABLE
+	// Установка регистра управления и статуса
+    SysTick->CTRL |= (0x1 << 2)       //	Выбор clock source
+        |(0x1 << 1)                   //	Разрешение вызывать обработчик прерывания SysTick_Handler() при достижении 0 в счетчике
+        |(0x1 << 0);                  //	Включение
 }
 
-//Функции для использования в других модулях
-void SysTick_Enable(uint32_t freq)
-{
-    SysTick_init(freq);
-}
-void SysTick_Handler(void)                                                  //Обработчик прерывания SysTick, вызывается каждый раз когда SysTick->VAL становится 0
-{
-    systick_counter++;
-}
-void delay_ms(uint32_t ms)                                                  //Блокирующая задержка
+void delay_ms(uint32_t ms)
 {
     uint32_t startTime = systick_counter;
-    while((systick_counter - startTime) < ms){} //подождать ms миллисекунд
+    while((systick_counter - startTime) < ms){}
 }
 
-
-
-
-
-
-uint32_t get_current_time(void)                                             //Получить текущее системное время после RESET
+uint32_t get_current_time(void)
 {
-    return systick_counter;     //Количество произошедших вызовов SysTick_Handler()
+    return systick_counter;
 }
-uint32_t is_time_passed(uint32_t start_time, uint32_t delay_time)           //Проверка прошло ли время delay_time после момента start_time
+
+uint32_t is_time_passed(uint32_t start_time, uint32_t delay_time)
 {
     return(systick_counter - start_time) >= delay_time;
 }
 
+/*************** Обработчик прерываний системного таймера *********************/
+void SysTick_Handler(void)
+{
+    systick_counter++;
+}
