@@ -3,16 +3,16 @@
 static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t flag, uint32_t timeout)       //Ожидание установки флага состояния SR
 {
     uint32_t start_time = get_current_time();
-    while(!(SPIx->SR & flag))
+    while(!(SPIx->SR & flag))   //Ожидание пока флаг не установится
     {
         if(is_time_passed(start_time, timeout)) return SPI_FLAG_TIMEOUT;
     }
     return SPI_OK;
 }
-static SPI_Status_t SPI_Wait_Clear_Flag_SR(SPI_TypeDef* SPIx, uint16_t flag, uint32_t timeout)       //Ожидание очистки флага состояния SR
+static SPI_Status_t SPI_Wait_Clear_Flag_SR(SPI_TypeDef* SPIx, uint16_t flag, uint32_t timeout)       //Ожидание сброса флага состояния SR
 {
     uint32_t start_time = get_current_time();
-    while((SPIx->SR & flag))
+    while((SPIx->SR & flag))    //Ожидание пока флаг установлен
     {
         if(is_time_passed(start_time, timeout)) return SPI_FLAG_TIMEOUT;
     }
@@ -65,8 +65,8 @@ SPI_Status_t SPI_Transmit(SPI_TypeDef* SPIx, uint8_t* data, uint32_t size)      
     //BSY==1 означает что шина SPI занята либо буфер передатчика еще не освободился
     //значит BSY==0 означает что буфер передатчика свободен => все данные отправлены
     //SPI_SR_BSY это 1 в 7 бите регистра SR
-    //SPI_SR_FREE это 0 в 7 бите регитсра SR
-    if(SPI_Wait_Clear_Flag_SR(SPIx, SPI_SR_BSY, 10) != SPI_OK) return SPI_ERROR_WRITE;       //ожидание очистки флага SPI_SR_BSY с таймаутом 10 мс
+
+    if(SPI_Wait_Clear_Flag_SR(SPIx, SPI_SR_BSY, 10) != SPI_OK) return SPI_ERROR_WRITE;       //ожидание сброса флага SPI_SR_BSY с таймаутом 10 мс
 
 	(void)SPIx->DR;
 	(void)SPIx->SR;
@@ -81,7 +81,7 @@ SPI_Status_t SPI_Receive(SPI_TypeDef* SPIx, uint8_t* data, uint32_t size)       
 		SPIx->DR = 0;    //запуск обмена
         //RXNE==1 означает что в буфере приемника появился байт данных
         if(SPI_Wait_Set_Flag_SR(SPIx, SPI_SR_RXNE, 10) != SPI_OK) return SPI_ERROR_READ;   //ожидание установки флага SPI_SR_RXNE с таймаутом 10 мс
-		*data++ = (SPIx->DR);                                                           //чтение байта данных из регистра в массив data
+		*data++ = (SPIx->DR);       //чтение байта данных из регистра в массив data
 		size--;
 	}
     return SPI_OK;
