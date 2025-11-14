@@ -207,7 +207,6 @@ int main()
 
 
 
-
     delay_ms(1000);
     LED_turnOFF_4_LED();
 

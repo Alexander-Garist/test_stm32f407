@@ -1,9 +1,22 @@
+/**
+  * @file    exti.h
+  * @brief   Файл содержит прототипы функций EXTI
+  */
+
+/* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef EXTI_H
 #define EXTI_H
 
 #include "CMSIS/stm32f4xx.h"
 
-typedef enum        //9.2.3 SYSCFG_EXTICR[x]
+// Маски триггеров
+#define EXTI_TRIGGER_RISING         (0x01)
+#define EXTI_TRIGGER_FALLING        (0x02)
+#define EXTI_TRIGGER_RISING_FALLING (0x03)
+
+/** Перечисление портов GPIO, на которых возможно использование внешних
+		прерываний, в RM п. 9.2.3 SYSCFG_EXTICR[x]*/
+typedef enum
 {
     EXTI_PortA = 0x00,
     EXTI_PortB = 0x01,
@@ -16,13 +29,32 @@ typedef enum        //9.2.3 SYSCFG_EXTICR[x]
     EXTI_PortI = 0x08
 }EXTI_Port;
 
-//Маски триггеров
-#define EXTI_TRIGGER_RISING         (0x01)
-#define EXTI_TRIGGER_FALLING        (0x02)
-#define EXTI_TRIGGER_RISING_FALLING (0x03)
+/**** Функции установки разрешения/запрета на обработку внешних прерываний ****/
 
-//пользовательские функции, можно использовать в других модулях
-void EXTI_Enable_Pin(EXTI_Port port, uint32_t pin, uint32_t trigger);        //Разрешить внешние прерывания на конкретном пине
-void EXTI_Disable_Pin(EXTI_Port port, uint32_t pin, uint32_t trigger);       //Запретить внешние прерывания на конкретном пине
-void EXTI_Clear_Flag(uint32_t pin);                                          //Сбросить флаг ожидания на конкретном пине (функция вызывается в обработчике внешнего прерывания)
+/**
+	! Функция EXTI_Enable_Pin включает обработку внешних прерываний на выбранном
+		пине и задает триггер, который будет вызывать прерывание.
+	- port - порт GPIO
+	- pin - пин GPIO
+	- trigger - триггер, вызывающий прерывание
+*/
+void EXTI_Enable_Pin(EXTI_Port port, uint32_t pin, uint32_t trigger);
+
+/**
+	! Функция EXTI_Disable_Pin выключает обработку внешних прерываний на
+		выбранном пине.
+	- port - порт GPIO
+	- pin - пин GPIO
+*/
+void EXTI_Disable_Pin(EXTI_Port port, uint32_t pin);
+
+/***** Функция сброса флага ожидания для выхода из обработчика прерывания *****/
+
+/**
+	! Функция EXTI_Clear_Flag сбрасывает флаг ожидания на выбранном пине.
+		Функция вызывается в обработчиках внешних прерываний.
+	- pin - пин GPIO
+*/
+void EXTI_Clear_Flag(uint32_t pin);
+
 #endif

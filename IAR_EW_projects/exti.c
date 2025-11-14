@@ -1,37 +1,67 @@
+/**
+  * @file    exti.c
+  * @brief   Файл содержит реализации функций EXTI
+  */
+
+/* Includes ------------------------------------------------------------------*/
 #include "exti.h"
 
-//Статические функции, нужны для сокрытия их реализации в других модулях
-static void EXTI_InitPin(EXTI_Port port, uint32_t pin, uint32_t trigger)    //Инициализация вывода для разрешения обработки внешних прерываний
+/********************** Статические функции ***********************************/
+
+/**
+	! Статическая функция EXTI_InitPin включает тактирование внешних прерываний
+		и конфигурирует обработку внешних прерываний на выбранном выводе
+		с использованием заданного триггера.
+	- port - порт GPIO, на котором будут обрабатываться внешние прерывания
+	- pin - пин GPIO, на котором будут обрабатываться внешние прерывания
+	- trigger - маска триггера, вызывающего внешнее прерывание
+*/
+static void EXTI_InitPin(EXTI_Port port, uint32_t pin, uint32_t trigger)
 {
-    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;                           //Для разрешения обработки прерываний
-    uint32_t EXTI_CR_INDEX = pin / 4;  //Выбрать конкретный регистр EXTICR(0,1,2,3)
-                                       //Пины 0,1,2,3 EXTICR[0]
-                                       //Пины 4,5,6,7 EXTICR[1]
-                                       //Пины 8,9,10,11 EXTICR[2]
-                                       //Пины 12,13,14,15 EXTICR[3]
-    uint32_t EXTI_CR_POSITION = (pin % 4) * 4;  //Конкретный бит в регистре
-                                                //определяет порт A, B, C и т.д.
-                                                //например порт D (0x03): вместо #define SYSCFG_EXTICR2_EXTI5_PD  ((uint16_t)0x0030) /*!<PD[5] pin */
-                                                //пин 5: (5 % 4)*4 = 4, значит  0x03 сдвигаем на 4 позиции влево, получается 0x30
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;	// Включение тактирования
 
-    SYSCFG->EXTICR[EXTI_CR_INDEX] &= ~(0xF << EXTI_CR_POSITION);    //Начальное обнуление всех битов
-    SYSCFG->EXTICR[EXTI_CR_INDEX] |= (port << EXTI_CR_POSITION);
+/** Выбор конкретного регистра EXTICR(0,1,2,3)
+	Пины 0,1,2,3 определяются регистром EXTICR[0]
+	Пины 4,5,6,7 определяются регистром EXTICR[1]
+	Пины 8,9,10,11 определяются регистром EXTICR[2]
+	Пины 12,13,14,15 определяются регистром EXTICR[3]
+*/
+	uint32_t EXTI_CR_INDEX = pin / 4;
 
-    EXTI->RTSR &= ~(0x1 << pin);    //Начальное обнуление регистров триггеров
+/** Конкретный бит в регистре
+	Определение порта, на котором будут обрабатываться внешние прерывания (A, B, C и т.д.)
+	например порт D (0x03): вместо #define SYSCFG_EXTICR2_EXTI5_PD  ((uint16_t)0x0030) // PD[5] pin
+	пин 5: (5 % 4)*4 = 4, значит  0x03 сдвиг на 4 позиции влево, получается 0x30
+*/
+	uint32_t EXTI_CR_POSITION = (pin % 4) * 4;
+
+    SYSCFG->EXTICR[EXTI_CR_INDEX] &= ~(0xF << EXTI_CR_POSITION);    // Начальное обнуление всех битов
+    SYSCFG->EXTICR[EXTI_CR_INDEX] |= (port << EXTI_CR_POSITION);	// Установка значения регистра EXTICR[x]
+
+	// Начальное обнуление регистров триггеров
+    EXTI->RTSR &= ~(0x1 << pin);
     EXTI->FTSR &= ~(0x1 << pin);
 
-    if(trigger & EXTI_TRIGGER_RISING)EXTI->RTSR |= (0x1 << pin);  //Выбор триггера
-    if(trigger & EXTI_TRIGGER_FALLING)EXTI->FTSR |= (0x1 << pin);
+	// Установка триггера
+    if(trigger & EXTI_TRIGGER_RISING) EXTI->RTSR |= (0x1 << pin);
+    if(trigger & EXTI_TRIGGER_FALLING) EXTI->FTSR |= (0x1 << pin);
 
-    EXTI->PR = (1 << pin);  //Начальное обнуление регистра ожидания
+	//Начальное обнуление регистра ожидания
+    EXTI->PR = (1 << pin);
 }
-static void EXTI_EnableIRQ(uint32_t pin)                                    //Разрешение внешних прерываний на конкретном пине
+
+/**
+	! Статическая функция EXTI_EnableIRQ разрешает обработку внешних прерываний
+		на выбранном выводе.
+	- pin - пин GPIO, на котором будут обрабатываться внешние прерывания
+*/
+static void EXTI_EnableIRQ(uint32_t pin)
 {
     EXTI->IMR |= (1 << pin);
 
-    switch(pin) {                           //Включение внешних прерываний на конкретном пине в вектор прерываний
+    switch(pin) {
         case 0:
-            NVIC_EnableIRQ(EXTI0_IRQn);     //Включение обработчиков внешних прерываний
+            NVIC_EnableIRQ(EXTI0_IRQn);
             break;
         case 1:
             NVIC_EnableIRQ(EXTI1_IRQn);
@@ -62,13 +92,19 @@ static void EXTI_EnableIRQ(uint32_t pin)                                    //Р
             break;
     }
 }
-static void EXTI_DisableIRQ(uint32_t pin)                                   //Запрет внешних прерываний на конкретном пине
+
+/**
+	! Статическая функция EXTI_DisableIRQ запрещает обработку внешних прерываний
+		на выбранном выводе.
+	- pin - пин GPIO, на котором будет запрещена обработка внешних прерываний
+*/
+static void EXTI_DisableIRQ(uint32_t pin)
 {
     EXTI->IMR &= ~(1 << pin);
 
-    switch(pin) {                               //Отключение внешних прерываний на конкретном пине в вектор прерываний
+    switch(pin) {
         case 0:
-            NVIC_DisableIRQ(EXTI0_IRQn);        //Отключение обработчиков внешних прерываний
+            NVIC_DisableIRQ(EXTI0_IRQn);
             break;
         case 1:
             NVIC_DisableIRQ(EXTI1_IRQn);
@@ -99,23 +135,23 @@ static void EXTI_DisableIRQ(uint32_t pin)                                   //З
             break;
     }
 }
-static void EXTI_ClearPR(uint32_t pin)                                      //Сброс флага ожидания (нужно вызывать в обработчике прерывания, чтобы при выходе из него не попасть сразу же снова в него)
-{
-    EXTI->PR = (1 << pin);
-}
 
-//Функции для использования в других модулях
-void EXTI_Enable_Pin(EXTI_Port port, uint32_t pin, uint32_t trigger)         //Разрешить внешние прерывания на конкретном пине
+
+/*********************** Глобальные функции ***********************************/
+
+void EXTI_Enable_Pin(EXTI_Port port, uint32_t pin, uint32_t trigger)
 {
     EXTI_InitPin(port, pin, trigger);
     EXTI_EnableIRQ(pin);
 }
-void EXTI_Disable_Pin(EXTI_Port port, uint32_t pin, uint32_t trigger)        //Запретить внешние прерывания на конкретном пине
+
+void EXTI_Disable_Pin(EXTI_Port port, uint32_t pin)
 {
-    EXTI_InitPin(port, pin, trigger);
+    EXTI_InitPin(port, pin, 0x0);
     EXTI_DisableIRQ(pin);
 }
-void EXTI_Clear_Flag(uint32_t pin)                                           //Сбросить флаг ожидания на конкретном пине (функция вызывается в обработчике внешнего прерывания)
+
+void EXTI_Clear_Flag(uint32_t pin)
 {
-    EXTI_ClearPR(pin);
+    EXTI->PR = (1 << pin);
 }

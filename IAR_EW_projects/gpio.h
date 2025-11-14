@@ -1,14 +1,66 @@
-#ifndef GPIO_H
-#define GPIO_H
+/**
+  * @file    gpio.h
+  * @brief   Файл содержит прототипы функций GPIO
+  */
 
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __GPIO_H__
+#define __GPIO_H__
+
+/* Includes ------------------------------------------------------------------*/
 #include "CMSIS/stm32f4xx.h"
-//пользовательские функции, можно использовать в других модулях
-void GPIO_set_HIGH(GPIO_TypeDef* port, int pin);                                //Установить высокий уровень на выходе GPIO
-void GPIO_set_LOW(GPIO_TypeDef* port, int pin);                                 //Установить низкий уровень на выходе GPIO
-void GPIO_toggle_Pin(GPIO_TypeDef* port, int pin);                              //Переключить состояние вывода GPIO (HIGH/LOW)
 
-void GPIO_Button_Enable(GPIO_TypeDef* port, int pin);                           //Определить пин как вход, к которому подключена кнопка
+/* Инициализация портов GPIO в режиме ввода/вывода и установка/изменение
+   логического уровня*/
 
-void GPIO_Enable_I2C(GPIO_TypeDef* port, int pin);                              //Включить пин в режиме альтернативной функции I2C
-void GPIO_Enable_SPI(SPI_TypeDef* SPIx, GPIO_TypeDef* port, int pin);           //Включить пин в режиме альтернативной функции SPI
-#endif
+	/**
+	! Функция GPIO_set_HIGH инициализирует порт GPIO как вывод и устанавливает
+		на нём высокий логический уровень.
+	- port - порт GPIO
+	- pin - пин GPIO
+	*/
+void GPIO_set_HIGH(GPIO_TypeDef* port, int pin);
+
+	/**
+	! Функция GPIO_set_LOW инициализирует порт GPIO как вывод и устанавливает
+		на нём низкий логический уровень.
+	- port - порт GPIO
+	- pin - пин GPIO
+	*/
+void GPIO_set_LOW(GPIO_TypeDef* port, int pin);
+
+	/**
+	! Функция GPIO_toggle_Pin инициализирует порт GPIO как вывод и меняет на нём
+		значение логического уровня на противоположное.
+	- port - порт GPIO
+	- pin - пин GPIO
+	*/
+void GPIO_toggle_Pin(GPIO_TypeDef* port, int pin);
+
+	/**
+	! Функция GPIO_Button_Enable инициализирует порт GPIO как ввод, к которому
+		подключена кнопка.
+	- port - порт GPIO
+	- pin - пин GPIO
+	*/
+void GPIO_Button_Enable(GPIO_TypeDef* port, int pin);
+
+/* Иницализация портов GPIO в режиме альтернативной функции *******************/
+	/**
+	! Функция GPIO_Enable_I2C инициализирует порт GPIO в режиме альтернативной
+		функции AF4 (I2C).
+	- port - порт GPIO
+	- pin - пин GPIO
+	*/
+void GPIO_Enable_I2C(GPIO_TypeDef* port, int pin);
+
+	/**
+	! Функция GPIO_Enable_SPI инициализирует порт GPIO в режиме альтернативной
+		функции AF5 или AF6 (SPI) в зависимости от выбранного модуля SPI.
+	- SPIx - модуль SPI
+	- port - порт GPIO
+	- pin - пин GPIO
+	*/
+void GPIO_Enable_SPI(SPI_TypeDef* SPIx, GPIO_TypeDef* port, int pin);
+
+#endif /*__GPIO_H__ */

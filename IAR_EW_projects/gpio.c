@@ -1,13 +1,26 @@
+/**
+  * @file    gpio.c
+  * @brief   Файл содержит реализации функций GPIO
+  */
+
+/* Includes ------------------------------------------------------------------*/
 #include "gpio.h"
 #include "systick.h"
 
-//Статические функции, нужны для сокрытия их реализации в других модулях
-static void GPIO_RCC_Enable(GPIO_TypeDef* port)                             //Функция включения тактирования конкретного порта GPIO
+/********************** Статические функции ***********************************/
+
+	/**
+	! Статическая функция GPIO_RCC_Enable включает тактирование выбранного порта
+		GPIO.
+	- port - порт GPIO
+	*/
+static void GPIO_RCC_Enable(GPIO_TypeDef* port)
 {
-    uint32_t Address_Shift = (uint32_t)port - (uint32_t)GPIOA;      //Расчет сдвига порта от GPIOA_BASE
-    Address_Shift /= 1024;                                          //Сдвиг каждого порта от GPIOA_BASE составляет 0x0400
-                                                                    //В десятичной системе это 1024
-    uint32_t RCC_Enable_Mask[] = {                          //Массив с масками для включения тактирования конкретного порта
+    uint32_t Address_Shift = (uint32_t)port - (uint32_t)GPIOA;					// Расчет сдвига порта от GPIOA_BASE
+    Address_Shift /= 1024;														// Сдвиг каждого порта от GPIOA_BASE составляет 0x0400, в десятичной системе 1024
+
+	// Массив с масками для включения тактирования конкретного порта
+    uint32_t RCC_Enable_Mask[] = {
         RCC_AHB1ENR_GPIOAEN,
         RCC_AHB1ENR_GPIOBEN,
         RCC_AHB1ENR_GPIOCEN,
@@ -18,106 +31,126 @@ static void GPIO_RCC_Enable(GPIO_TypeDef* port)                             //Ф
         RCC_AHB1ENR_GPIOHEN,
         RCC_AHB1ENR_GPIOIEN
     };
-    RCC->AHB1ENR |= RCC_Enable_Mask[Address_Shift];         //Включение только нужного порта
+    RCC->AHB1ENR |= RCC_Enable_Mask[Address_Shift];								// Включение только нужного порта
 }
 
-static void GPIO_init_OUTPUT(GPIO_TypeDef* port, int pin)                   //Инициализация GPIO выхода
+	/**
+	! Статическая функция GPIO_init_OUTPUT инициализирует выбранный пин GPIO как
+		вывод.
+	- port - порт GPIO
+	- pin - пин GPIO
+	*/
+static void GPIO_init_OUTPUT(GPIO_TypeDef* port, int pin)
 {
-    port->MODER &= ~(0x3 << (pin * 2));             //MODER 00 INPUT    MODER 10 AF mode
-    port->MODER |= (0x1 << (pin * 2));              //MODER 01 OUTPUT   MODER 11 Analog
+    port->MODER &= ~(0x3 << (pin * 2));				// Начальный сброс
+    port->MODER |= (0x1 << (pin * 2));				// MODER 01 => OUTPUT
 
-    port->OTYPER &= ~(0x1 << pin);                  //OTYPER 0 push-pull 1 open-drain
+    port->OTYPER &= ~(0x1 << pin);					// OTYPER 0 => push-pull
 
-    port->OSPEEDR &= ~(0x3 << (pin * 2));           //OSPEEDR 00 LOW  01 MEDIUM  10 HIGH 11 VERY HIGH
-    port->OSPEEDR |= (0x1 << (pin * 2));
+    port->OSPEEDR &= ~(0x3 << (pin * 2));			// Начальный сброс
+    port->OSPEEDR |= (0x1 << (pin * 2));			// OSPEED 01 => medium speed
 
-    port->PUPDR &= ~(0x3 << (pin * 2));             //PUPDR 00 NO pull-up, NO pull-down, 01 pull-UP, 10 pull-DOWN
+    port->PUPDR &= ~(0x3 << (pin * 2));				// PUPDR 00 => NO pull-up NO pull-down
 }
 
-static void GPIO_init_INPUT(GPIO_TypeDef* port, int pin)                    //Инициализация GPIO входа
+	/**
+	! Статическая функция GPIO_init_INPUT инициализирует выбранный пин GPIO как
+		ввод.
+	- port - порт GPIO
+	- pin - пин GPIO
+	*/
+static void GPIO_init_INPUT(GPIO_TypeDef* port, int pin)
 {
-    port->MODER &= ~(0x1 << (pin * 2));             //MODER 00 INPUT
+    port->MODER &= ~(0x1 << (pin * 2));             // MODER 00 => INPUT
 
-    port->PUPDR &= ~(0x3 << (pin * 2));             //PUPDR 10 pull-DOWN
-    port->PUPDR |= (0x2 << (pin * 2));
+    port->PUPDR &= ~(0x3 << (pin * 2));				// Начальный сброс
+    port->PUPDR |= (0x2 << (pin * 2));				// PUPDR 10 pull-DOWN
 }
 
-static void GPIO_init_AF_Mode(GPIO_TypeDef* port, int pin, int number_AF)   //Инициализация порта GPIO в режиме альтернативной функции, настройка MODER и AFR, остальные регистры нужно настраивать отдельно
-{                                                                           //конкретно для I2C нужна AF 4, поэтому в AFR[x] нужно поместить 0100
-    port->MODER &= ~(0x3 << (pin * 2));     //Сначала сброс
-    port->MODER |= (0x2 << (pin * 2));      //MODER 0x0 INPUT    0x1 OUTPUT   0x2 AF mode  0x3 Analog
+	/**
+	! Статическая функция GPIO_init_AF_Mode инициализирует выбранный пин GPIO
+		в режиме альтернативной функции number_AF и настраивает регистры MODER
+		и AFR.
+	- port - порт GPIO
+	- pin - пин GPIO
+	- number_AF - номер альтернативной функции
+	*/
+static void GPIO_init_AF_Mode(GPIO_TypeDef* port, int pin, int number_AF)
+{
+    port->MODER &= ~(0x3 << (pin * 2));     // Начальный сброс
+    port->MODER |= (0x2 << (pin * 2));      // MODER 0x2 => AF mode
 
-    if(pin <= 7)    //AFRLx пины 0-7
+    if(pin <= 7)    // AFR[0] настраивает пины 0-7
     {
-        port->AFR[0] &= ~(0xF << (pin * 4));            //Сначала обнулить
-        port->AFR[0] |= (number_AF << (pin * 4));       //Теперь установить нужные биты AFR (0100 для I2C)
+        port->AFR[0] &= ~(0xF << (pin * 4));            // Начальный сброс
+        port->AFR[0] |= (number_AF << (pin * 4));       // Установка выбранной альтернативной функции
     }
-    if(pin > 7)     //AFRHx пины 8-15
+    if(pin > 7)     // AFR[1] настраивает пины 8-15
     {
-        int shifted_pin = pin - 8;                          //Сдвиг пинов, т.к. AFRH начинается не с 0, а с 8 пина
-        port->AFR[1] &= ~(0xF << (shifted_pin * 4));        //Сначала обнулить
-        port->AFR[1] |= (number_AF << (shifted_pin * 4));   //Теперь установить нужные биты AFR (0100 для I2C)
+        int shifted_pin = pin - 8;                          //	Сдвиг пинов, т.к. AFR[1] начинается не с 0, а с 8 пина
+        port->AFR[1] &= ~(0xF << (shifted_pin * 4));        // Начальный сброс
+        port->AFR[1] |= (number_AF << (shifted_pin * 4));   // Установка выбранной альтернативной функции
     }
     delay_ms(10);
 }
 
 
-//Функции для использования в других модулях
-//OUTPUT
-void GPIO_set_HIGH(GPIO_TypeDef* port, int pin)                             //Установить высокий уровень на выходе GPIO
-{
-    GPIO_RCC_Enable(port);
-    GPIO_init_OUTPUT(port, pin);
+/********************** Глобальные функции ************************************/
 
-    port->BSRR = (1 << pin);                       //BSRRL  1 на выходе высокий уровень
-}
-void GPIO_set_LOW(GPIO_TypeDef* port, int pin)                              //Установить низкий уровень на выходе GPIO
+/**************** Инициализация GPIO как вывода *******************************/
+void GPIO_set_HIGH(GPIO_TypeDef* port, int pin)
 {
-    GPIO_RCC_Enable(port);
-    GPIO_init_OUTPUT(port, pin);
+    GPIO_RCC_Enable(port);			// Включение тактирования
+    GPIO_init_OUTPUT(port, pin);	// Инициализация вывода GPIO
 
-    port->BSRR = (1 << (pin + 16));                       //BSRRH - 1 на выходе низкий уровень
-}
-void GPIO_toggle_Pin(GPIO_TypeDef* port, int pin)                           //Переключить состояние вывода GPIO (HIGH/LOW)
-{
-    GPIO_RCC_Enable(port);
-    GPIO_init_OUTPUT(port, pin);
-
-    port->ODR ^= (1 << pin);
+    port->BSRR = (1 << pin);		// Установка высокого уровня на выводе
 }
 
-//INPUT
-void GPIO_Button_Enable(GPIO_TypeDef* port, int pin)                            //Определить пин как вход, к которому подключена кнопка
+void GPIO_set_LOW(GPIO_TypeDef* port, int pin)
 {
-    GPIO_RCC_Enable(port);
-    GPIO_init_INPUT(port, pin);
+    GPIO_RCC_Enable(port);			// Включение тактирования
+    GPIO_init_OUTPUT(port, pin);	// Инициализация вывода GPIO
+
+    port->BSRR = (1 << (pin + 16));	// Установка низкого уровня на выводе
 }
 
-//ALTERNATE FUNCTION MODE
-void GPIO_Enable_I2C(GPIO_TypeDef* port, int pin)                               //Включить пин в режиме альтернативной функции I2C
+void GPIO_toggle_Pin(GPIO_TypeDef* port, int pin)
 {
-    GPIO_RCC_Enable(port);
+    GPIO_RCC_Enable(port);			// Включение тактирования
+    GPIO_init_OUTPUT(port, pin);	// Инициализация вывода GPIO
 
-    port->OTYPER |= (0x1 << pin);           //open-drain для I2C
-    port->OSPEEDR |= (0x3 << pin);          //high speed
-
-    port->PUPDR &= ~(0x3 << (pin * 2));     //Сначала сброс
-    port->PUPDR |= (0x1 << (pin * 2));      //pull-up
-
-    GPIO_init_AF_Mode(port, pin, 4);        //MODER и AFR
+    port->ODR ^= (1 << pin);		// Переключение уровня на выводе
 }
-void GPIO_Enable_SPI(SPI_TypeDef* SPIx, GPIO_TypeDef* port, int pin)            //Включить пин в режиме альтернативной функции SPI
-{
-    GPIO_init_OUTPUT(port, pin);    //включение тактирования + настройка регистров как для выхода
-    //MODER     0x1
-    //OTYPER    0x0
-    //OSPEEDR   0x1
-    //PUPDR     0x0
 
-    //далее GPIO_init_AF_Mode настроит MODER и AFR
-    if(SPIx == SPI1) GPIO_init_AF_Mode(port, pin, 5);   //для SPI1 AF5
-    if(SPIx == SPI2) GPIO_init_AF_Mode(port, pin, 5);   //для SPI2 AF5
-    if(SPIx == SPI3) GPIO_init_AF_Mode(port, pin, 6);   //для SPI3 AF6
+/**************** Инициализация GPIO как ввода ********************************/
+void GPIO_Button_Enable(GPIO_TypeDef* port, int pin)
+{
+    GPIO_RCC_Enable(port);			// Включение тактирования
+    GPIO_init_INPUT(port, pin);		// Инициализация ввода GPIO
+}
+
+/************ Инициализация GPIO в режиме альтернативной функции **************/
+void GPIO_Enable_I2C(GPIO_TypeDef* port, int pin)
+{
+    GPIO_RCC_Enable(port);					// Включение тактирования
+
+    port->OTYPER |= (0x1 << pin);           // Open-drain для I2C
+    port->OSPEEDR |= (0x3 << pin);          // High speed
+
+    port->PUPDR &= ~(0x3 << (pin * 2));     // Начальный сброс
+    port->PUPDR |= (0x1 << (pin * 2));      // Pull-UP
+
+    GPIO_init_AF_Mode(port, pin, 4);        // Настройка регистров MODER и AFR
+}
+
+void GPIO_Enable_SPI(SPI_TypeDef* SPIx, GPIO_TypeDef* port, int pin)
+{
+    GPIO_init_OUTPUT(port, pin);    // Включение тактирования + инициализация выхода
+
+    // GPIO_init_AF_Mode настроит MODER и AFR
+    if(SPIx == SPI1) GPIO_init_AF_Mode(port, pin, 5);   // Для SPI1 AF5
+    if(SPIx == SPI2) GPIO_init_AF_Mode(port, pin, 5);   // Для SPI2 AF5
+    if(SPIx == SPI3) GPIO_init_AF_Mode(port, pin, 6);   // Для SPI3 AF6
 }
 
 
