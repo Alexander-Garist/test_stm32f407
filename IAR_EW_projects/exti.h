@@ -4,8 +4,8 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef EXTI_H
-#define EXTI_H
+#ifndef __EXTI_H__
+#define __EXTI_H__
 
 #include "CMSIS/stm32f4xx.h"
 
@@ -57,4 +57,4 @@ void EXTI_Disable_Pin(EXTI_Port port, uint32_t pin);
 */
 void EXTI_Clear_Flag(uint32_t pin);
 
-#endif
+#endif /*__EXTI_H__ */
