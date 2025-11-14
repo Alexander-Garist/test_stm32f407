@@ -9,11 +9,11 @@
 
 /********************** Статические функции ***********************************/
 
-	/**
+/**
 	! Статическая функция GPIO_RCC_Enable включает тактирование выбранного порта
 		GPIO.
 	- port - порт GPIO
-	*/
+*/
 static void GPIO_RCC_Enable(GPIO_TypeDef* port)
 {
     uint32_t Address_Shift = (uint32_t)port - (uint32_t)GPIOA;					// Расчет сдвига порта от GPIOA_BASE
@@ -34,12 +34,12 @@ static void GPIO_RCC_Enable(GPIO_TypeDef* port)
     RCC->AHB1ENR |= RCC_Enable_Mask[Address_Shift];								// Включение только нужного порта
 }
 
-	/**
+/**
 	! Статическая функция GPIO_init_OUTPUT инициализирует выбранный пин GPIO как
 		вывод.
 	- port - порт GPIO
 	- pin - пин GPIO
-	*/
+*/
 static void GPIO_init_OUTPUT(GPIO_TypeDef* port, int pin)
 {
     port->MODER &= ~(0x3 << (pin * 2));				// Начальный сброс
@@ -53,12 +53,12 @@ static void GPIO_init_OUTPUT(GPIO_TypeDef* port, int pin)
     port->PUPDR &= ~(0x3 << (pin * 2));				// PUPDR 00 => NO pull-up NO pull-down
 }
 
-	/**
+/**
 	! Статическая функция GPIO_init_INPUT инициализирует выбранный пин GPIO как
 		ввод.
 	- port - порт GPIO
 	- pin - пин GPIO
-	*/
+*/
 static void GPIO_init_INPUT(GPIO_TypeDef* port, int pin)
 {
     port->MODER &= ~(0x1 << (pin * 2));             // MODER 00 => INPUT
@@ -67,14 +67,14 @@ static void GPIO_init_INPUT(GPIO_TypeDef* port, int pin)
     port->PUPDR |= (0x2 << (pin * 2));				// PUPDR 10 pull-DOWN
 }
 
-	/**
+/**
 	! Статическая функция GPIO_init_AF_Mode инициализирует выбранный пин GPIO
 		в режиме альтернативной функции number_AF и настраивает регистры MODER
 		и AFR.
 	- port - порт GPIO
 	- pin - пин GPIO
 	- number_AF - номер альтернативной функции
-	*/
+*/
 static void GPIO_init_AF_Mode(GPIO_TypeDef* port, int pin, int number_AF)
 {
     port->MODER &= ~(0x3 << (pin * 2));     // Начальный сброс
