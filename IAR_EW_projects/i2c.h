@@ -9,7 +9,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "CMSIS/stm32f4xx.h"
-#include "systick.h"
 
 /************* Перечисление статусов выполнения функций I2C *******************/
 typedef enum
@@ -25,54 +24,68 @@ typedef enum
     I2C_ERROR_STOP =        8   //Ошибка генерации состояния STOP
 }I2C_Status_t;
 
-/********************** Глобальные функции ************************************/
+/******************************************************************************/
 
 /** Функции инициализации модуля I2C и проверки готовности подключенного устройства**/
-/**
+
+	/**
 	! Функция I2C_Enable_Pin разрешает использовать выбранный модуль I2C.
 		Функция вызывается после настройки GPIO.
-	- I2Cx - выбранный модуль I2C
-*/
-void I2C_Enable_Pin(I2C_TypeDef* I2Cx);
+	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
+	*/
+void I2C_Enable_Pin( I2C_TypeDef* I2Cx );
 
-/**
+	/**
 	! Функция I2C_is_Device_Ready определяет, готово ли устройство, подключенное
 		к шине I2C, к работе.
-	- I2Cx - выбранный модуль I2C
+	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
 	- device_addr - адрес подключенного по I2C устройства
-	+ статус готовности
-*/
-I2C_Status_t I2C_is_Device_Ready(I2C_TypeDef* I2Cx, uint8_t device_addr);
+	return: статус готовности
+	*/
+I2C_Status_t I2C_is_Device_Ready(
+	I2C_TypeDef *	I2Cx,
+	uint8_t			device_addr
+);
 
 /********************** Функции чтения/записи I2C *****************************/
 
-/**
+	/**
 	! Функция I2C_Write отправляет по шине I2C данные
-	- I2Cx - выбранный модуль I2C
+	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
 	- device_addr - адрес подключенного по I2C устройства
 	- data - данные для отправки
 	- size - объем данных для отправки
-	+ статус выполнения
-*/
-I2C_Status_t I2C_Write(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uint16_t size);
+	return: статус выполнения
+	*/
+I2C_Status_t I2C_Write(
+	I2C_TypeDef *	I2Cx,
+	uint8_t			device_addr,
+	uint8_t *		data,
+	uint16_t		size
+);
 
-/**
+	/**
 	! Функция I2C_Read принимает по шине I2C данные
-	- I2Cx - выбранный модуль I2C
+	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
 	- device_addr - адрес подключенного по I2C устройства
 	- data - принятые данные
 	- size - объем принятых данных
-	+ статус выполнения
-*/
-I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uint16_t size);
+	return: статус выполнения
+	*/
+I2C_Status_t I2C_Read(
+	I2C_TypeDef *	I2Cx,
+	uint8_t			device_addr,
+	uint8_t *		data,
+	uint16_t		size
+);
 
 /*************** Функция для отладки работы модуля I2C ************************/
 
-/**
+	/**
 	! Функция I2C_Status_Report выводит статус выполнения функции I2C для
 		отладки
-	- статус выполнения
-*/
+	- Function_Status - статус выполнения
+	*/
 void I2C_Status_Report(I2C_Status_t Function_Status);
 
 #endif /*__I2C_H__ */

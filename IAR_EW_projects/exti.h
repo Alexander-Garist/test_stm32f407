@@ -3,13 +3,14 @@
   * @brief   Файл содержит прототипы функций EXTI
   */
 
-/* Define to prevent recursive inclusion -------------------------------------*/
+/** Define to prevent recursive inclusion *************************************/
 #ifndef __EXTI_H__
 #define __EXTI_H__
 
-#include "CMSIS/stm32f4xx.h"
+/** Includes ******************************************************************/
+#include <stdint.h>
 
-// Маски триггеров
+/** Маски триггеров ***********************************************************/
 #define EXTI_TRIGGER_RISING         (0x01)
 #define EXTI_TRIGGER_FALLING        (0x02)
 #define EXTI_TRIGGER_RISING_FALLING (0x03)
@@ -29,26 +30,31 @@ typedef enum
     EXTI_PortI = 0x08
 }EXTI_Port;
 
-/**** Функции установки разрешения/запрета на обработку внешних прерываний ****/
+/** Functions *****************************************************************/
 
-/**
+	/**
 	! Функция EXTI_Enable_Pin включает обработку внешних прерываний на выбранном
 		пине и задает триггер, который будет вызывать прерывание.
 	- port - порт GPIO
 	- pin - пин GPIO
 	- trigger - триггер, вызывающий прерывание
-*/
-void EXTI_Enable_Pin(EXTI_Port port, uint32_t pin, uint32_t trigger);
+	*/
+void EXTI_Enable_Pin(
+	EXTI_Port	port,
+	uint32_t	pin,
+	uint32_t	trigger
+);
 
-/**
+	/**
 	! Функция EXTI_Disable_Pin выключает обработку внешних прерываний на
 		выбранном пине.
 	- port - порт GPIO
 	- pin - пин GPIO
-*/
-void EXTI_Disable_Pin(EXTI_Port port, uint32_t pin);
-
-/***** Функция сброса флага ожидания для выхода из обработчика прерывания *****/
+	*/
+void EXTI_Disable_Pin(
+	EXTI_Port	port,
+	uint32_t	pin
+);
 
 /**
 	! Функция EXTI_Clear_Flag сбрасывает флаг ожидания на выбранном пине.

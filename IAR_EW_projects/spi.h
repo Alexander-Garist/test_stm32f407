@@ -7,8 +7,10 @@
 #ifndef __SPI_H__
 #define __SPI_H__
 
+/* Includes ------------------------------------------------------------------*/
 #include "CMSIS/stm32f4xx.h"
-#include "systick.h"
+
+/* Defines -------------------------------------------------------------------*/
 // Определение выводов SPI1
 #define SPI1_CS_PORT      GPIOA
 #define SPI1_CS_PIN       4
@@ -44,9 +46,11 @@
 //Для SPI1
 #define SPI1_CS_LOW()   (SPI1_CS_PORT->BSRR = (1 << (SPI1_CS_PIN + 16)))
 #define SPI1_CS_HIGH()  (SPI1_CS_PORT->BSRR = (1 << SPI1_CS_PIN))
+
 //Для SPI2
 #define SPI2_CS_LOW()   (SPI2_CS_PORT->BSRR = (1 << (SPI2_CS_PIN + 16)))
 #define SPI2_CS_HIGH()  (SPI2_CS_PORT->BSRR = (1 << SPI2_CS_PIN))
+
 //Для SPI3
 #define SPI3_CS_LOW()   (SPI3_CS_PORT->BSRR = (1 << (SPI3_CS_PIN + 16))
 #define SPI3_CS_HIGH()  (SPI3_CS_PORT->BSRR = (1 << SPI3_CS_PIN))
@@ -61,7 +65,7 @@ typedef enum
     SPI_ERROR_READ =        4   //Ошибка приема данных
 }SPI_Status_t;
 
-/********************** Глобальные функции ************************************/
+/** Functions *****************************************************************/
 
 	/**
 	! Включение выбранного модуля SPI (тактирование и настройка регистров)
@@ -74,7 +78,7 @@ void SPI_Enable_Pin(SPI_TypeDef* SPIx);
 	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
 	- data - указатель на массив отправляемых данных
 	- size - объем передаваемых данных в байтах
-	+ статус выполнения отправки данных (если отправка успешна, вернет SPI_OK)
+	return: статус выполнения отправки данных (если отправка успешна, вернет SPI_OK)
 	*/
 SPI_Status_t SPI_Transmit(
 	SPI_TypeDef *	SPIx,
@@ -87,12 +91,12 @@ SPI_Status_t SPI_Transmit(
 	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
 	- data - указатель на массив, в который запишутся принятые данные
 	- size - объем принимаемых данных в байтах
-	+ статус выполнения приема данных (если прием успешен, вернет SPI_OK)
+	return: статус выполнения приема данных (если прием успешен, вернет SPI_OK)
 	*/
 SPI_Status_t SPI_Receive(
-	SPI_TypeDef* SPIx,
-	uint8_t* data,
-	uint32_t size
+	SPI_TypeDef *	SPIx,
+	uint8_t *		data,
+	uint32_t		size
 );
 
 #endif /*__SPI_H__ */

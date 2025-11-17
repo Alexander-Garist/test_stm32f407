@@ -3,7 +3,7 @@
   * @brief   Файл содержит реализации функций GPIO
   */
 
-/* Includes ------------------------------------------------------------------*/
+/** Includes ******************************************************************/
 #include "gpio.h"
 #include "systick.h"
 
@@ -152,5 +152,3 @@ void GPIO_Enable_SPI(SPI_TypeDef* SPIx, GPIO_TypeDef* port, int pin)
     if(SPIx == SPI2) GPIO_init_AF_Mode(port, pin, 5);   // Для SPI2 AF5
     if(SPIx == SPI3) GPIO_init_AF_Mode(port, pin, 6);   // Для SPI3 AF6
 }
-
-

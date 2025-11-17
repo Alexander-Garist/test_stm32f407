@@ -1,53 +1,96 @@
+/**
+  * @file    main.c
+  * @brief   Основной файл проекта, содержит проверку работоспособности функций из разных модулей.
+  */
+
+/** Includes **********************************************************************************************************/
 #include <stdio.h>
 #include "CMSIS/stm32f4xx.h"
-
 #include "systick.h"
 #include "gpio.h"
 #include "exti.h"
-
 #include "i2c.h"
 #include "BL24CM1A.h"
-
 #include "spi.h"
 #include "FM25Q08B.h"
 
-//===========для GPIO, EXTI и SysTick==========================================================
-#define TIME_SHORT      100      //Время моргания светодиодов в 3 режимах
+/** Defines ***********************************************************************************************************/
+
+/** Период моргания светодиодов в 3 режимах ***************************************************************************/
+#define TIME_SHORT      100
 #define TIME_MEDIUM     300
 #define TIME_LONG       500
 
-#define BUTTON_TRIGGER  EXTI_TRIGGER_FALLING    //Триггер внешнего прерывания при нажатии кнопки
-#define DEBOUNCE_TIME   100                     //100 мс для отсеивания дребезга
+/** Триггер внешнего прерывания и задержка для фильтрации дребезга при нажатии кнопки *********************************/
+#define BUTTON_TRIGGER  EXTI_TRIGGER_FALLING
+#define DEBOUNCE_TIME   100
+
+/** Defines для проверки I2C ******************************************************************************************/
+#define EEPROM_ADDRESS						0x50							// 7-битный адрес подключенного модуля EEPROM, пины A0, A1 подтянуты к земле 1010000
+#define START_ADDRESS						0x00							// Адрес в памяти EEPROM, куда записываются данные
+#define length_All_Data						0x20000							// Суммарное количество отправленных байт в память EEPROM 131072
+#define length_Transmitted_Data				4096							// Максимальное количество отправленных байт за 1 операцию отправки (16 страниц по 256 байт)
+#define length_Received_Data				4096							// Количество считанных байт из памяти EEPROM
+#define MAX_NUMBER_ATTEMPTS_CONNECT_EEPROM	10								// Максимум попыток подключиться к EEPROM за один раз
+#define data_2_byte_SIZE					(length_Transmitted_Data / 2)   // Размер массива 2-байтных данных
+#define send_SIZE							512								// Размер массива данных, заполненного буквами
+
+/** Defines для проверки SPI ******************************************************************************************/
 
 
-static uint32_t time_delay = 100;               //Время задержки в тиках systick_counter
-static uint32_t time_ms_one_interrupt = 1;      //Время в мс, за которое вызывается SysTick_Handler() 1 раз
 
-volatile static uint32_t blink_mode = 0;    //Выбор режима моргания
-//0 - моргают 4 светодиода быстро
-//1 - моргает зеленый со средней частотой
-//2 - моргает красный медленно
-void set_time_delay(uint32_t time)                      //callback функция для установки частоты моргания
+
+/** Переменные ********************************************************************************************************/
+static uint32_t time_delay = 100;				// Период моргания светодиодов в основном цикле while в тиках systick_counter
+
+//Выбор режима моргания
+volatile static uint32_t blink_mode = 0;		// 0 - моргают 4 светодиода быстро
+												// 1 - моргает зеленый со средней частотой
+												// 2 - моргает красный медленно
+uint8_t button_state = 0;						// Состояние кнопки нажата/не нажата
+uint32_t button_last_time = 0;					// Время последнего нажатия
+uint16_t data_2_byte[data_2_byte_SIZE];         // Массив двухбайтных данных 2048 чисел = 4096 байт
+
+/** Функции ***********************************************************************************************************/
+
+	/**
+	! callback функция для установки частоты моргания.
+	- time - требуемый период моргания светоиодов.
+	*/
+void set_time_delay(uint32_t time)
 {
     time_delay = time;
 }
-void change_blink_mode(void (*callback)(uint32_t))      //Функция изменения режима моргания, вызывается в обработчике внешнего прерывания EXTI0_IRQHandler
-{
-    blink_mode++;                               //Нажатие кнопки переключает режим моргания на следующий
-    if(blink_mode > 2) blink_mode %= 3;         //Защита от переполнения количества режимов моргания
 
-    if(blink_mode == 0)callback(TIME_SHORT);    //time_delay = TIME_SHORT;
-    if(blink_mode == 1)callback(TIME_MEDIUM);   //time_delay = TIME_MEDIUM;
-    if(blink_mode == 2)callback(TIME_LONG);     //time_delay = TIME_LONG;
+	/**
+	! Функция изменения режима моргания, вызывается в обработчике внешнего прерывания EXTI0_IRQHandler.
+	- указатель на callback функцию.
+*/
+void change_blink_mode(void (*callback)(uint32_t))
+{
+    blink_mode++;									// Нажатие кнопки переключает режим моргания на следующий
+    if (blink_mode > 2) blink_mode %= 3;			// Защита от переполнения количества режимов моргания
+
+    if (blink_mode == 0) callback(TIME_SHORT);		// Эквивалентно time_delay = TIME_SHORT;
+    if (blink_mode == 1) callback(TIME_MEDIUM);		// Эквивалентно time_delay = TIME_MEDIUM;
+    if (blink_mode == 2) callback(TIME_LONG);		// Эквивалентно time_delay = TIME_LONG;
 }
-void LED_turnON_4_LED(void)                                                 //Включить все 4 светодиода
+
+	/**
+	! Функция включения всех 4 пользовательских светодиодов на плате: PD12, PD13, PD14, PD15.
+	*/
+void LED_turnON_4_LED(void)
 {
     GPIO_set_HIGH(GPIOD, 12);
     GPIO_set_HIGH(GPIOD, 13);
     GPIO_set_HIGH(GPIOD, 14);
     GPIO_set_HIGH(GPIOD, 15);
 }
-void LED_turnOFF_4_LED(void)                                                //Выключить все 4 светодиода
+
+	/**
+	! Функция выключения всех 4 пользовательских светодиодов на плате: PD12, PD13, PD14, PD15.
+	*/
+void LED_turnOFF_4_LED(void)
 {
     GPIO_set_LOW(GPIOD, 12);
     GPIO_set_LOW(GPIOD, 13);
@@ -55,65 +98,50 @@ void LED_turnOFF_4_LED(void)                                                //В
     GPIO_set_LOW(GPIOD, 15);
 }
 
-uint8_t button_state = 0;       //Состояние кнопки нажата/не нажата
-uint32_t button_last_time = 0;  //Время последнего нажатия
-
-void EXTI0_IRQHandler(void)                                                 //Обработчик внешнего прерывания (нажатия кнопки на выводе PA0)
+	/**
+	! обработчик внешнего прерывания (нажатия пользовательской кнопки на выводе PA0).
+	*/
+void EXTI0_IRQHandler(void)
 {
-    GPIO_set_HIGH(GPIOD, 15);                   //Индикация нажатия кнопки синим светодиодом
-    uint32_t current_time = get_current_time(); //Момент времени начала обработки прерывания
-    if(current_time - button_last_time > DEBOUNCE_TIME)
+    GPIO_set_HIGH(GPIOD, 15);								// Индикация нажатия кнопки синим светодиодом
+    uint32_t current_time = get_current_time();				// Момент времени начала обработки прерывания
+    if (current_time - button_last_time > DEBOUNCE_TIME)
     {
-        change_blink_mode(set_time_delay);      //Логика нажатия на кнопку - смена режима
-        button_last_time = get_current_time();  //Обновить время последнего нажатия
+        change_blink_mode(set_time_delay);					// Логика нажатия на кнопку - смена режима
+        button_last_time = get_current_time();				// Обновить время последнего нажатия
     }
-    EXTI_Clear_Flag(0);     //Сброс флага для выхода из прерывания
-    LED_turnOFF_4_LED();    //Выключение всех светодиодов
+    EXTI_Clear_Flag(0);										// Сброс флага для выхода из прерывания
+    LED_turnOFF_4_LED();									// Выключение всех светодиодов
 }
-//==========для I2C================================================================================================================================================
-#define EEPROM_ADDRESS      0x50        //7-битный адрес подключенного модуля EEPROM, пины A0, A1 подтянуты к земле 1010000
-#define START_ADDRESS       0x00        //Адрес в памяти EEPROM, куда записываются данные
-
-#define length_All_Data             0x20000     //суммарное количество отправленных байт в память EEPROM 131072
-#define length_Transmitted_Data     4096        //максимальное количество отправленных байт за 1 операцию отправки (16 страниц по 256 байт)
-#define length_Received_Data        4096        //количество считанных байт из памяти EEPROM
-
-#define MAX_NUMBER_ATTEMPTS_CONNECT_EEPROM  10  //Максимум попыток подключиться к EEPROM за один раз
-
-#define data_2_byte_SIZE    (length_Transmitted_Data / 2)   //размер массива 2-байтных данных
-#define send_SIZE 512
-uint16_t data_2_byte[data_2_byte_SIZE];         //массив двухбайтных данных 2048 чисел = 4096 байт
-//==========для SPI===============================================================================================================================================
-
 
 int main()
 {
-    //===Инициализация портов GPIO на вход и выход=================
-    //===Включение обработки внешних прерываний====================
-    //===Включение системного таймера для неблокирующих задержек===
-    GPIO_Button_Enable(GPIOA, 0);                       //Определение порта PA0 как вход с кнопкой
-    EXTI_Enable_Pin(EXTI_PortA, 0, BUTTON_TRIGGER);     //Включить внешние прерывания для этого пина
-    LED_turnOFF_4_LED();                                //В начальный момент времени все светодиоды выключены
-    SysTick_Init(SystemCoreClock, time_ms_one_interrupt);              //Включение SysTick, аргумент - требуемый период увеличения счетчика тиков
+    /** Инициализация портов GPIO на вход и выход, включение обработки внешних прерываний и системного таймера для неблокирующих задержек */
 
-    //============I2C==============================================
-    //===Инициализация портов GPIO в режиме альтернативной функции=
-    GPIO_Enable_I2C(GPIOB, 7);   //Определение PB7 как SDA
-    GPIO_Enable_I2C(GPIOB, 6);   //Определение PB6 как SCL
-    //===Включение модуля I2C на выбранных портах GPIO=============
-    I2C_Enable_Pin(I2C1);
-    //=============================================================
+    GPIO_Button_Enable(GPIOA, 0);                       // Определение порта PA0 как вход с кнопкой
+    EXTI_Enable_Pin(EXTI_PortA, 0, BUTTON_TRIGGER);     // Включить внешние прерывания для этого пина
+    LED_turnOFF_4_LED();                                // В начальный момент времени все светодиоды выключены
+    SysTick_Init(SystemCoreClock);						// Включение SysTick
 
-    //===========SPI=====================================================
-    GPIO_set_HIGH(GPIOB, 12);       //Определение PB12 как OUTPUT
-    //===Инициализация портов GPIO в режиме альтернативной функции=======
+    /************** Настройка I2C и инициализация портов GPIO в режиме альтернативной функции *************************/
+
+    GPIO_Enable_I2C(GPIOB, 7);		// Определение PB7 как SDA
+    GPIO_Enable_I2C(GPIOB, 6);		// Определение PB6 как SCL
+    I2C_Enable_Pin(I2C1);			// Включение модуля I2C1
+
+	/************** Настройка SPI и инициализация портов GPIO в режиме альтернативной функции *************************/
+
+    GPIO_set_HIGH(GPIOB, 12);								//Определение PB12 как OUTPUT
     GPIO_Enable_SPI(SPI2, SPI2_SCK_PORT, SPI2_SCK_PIN);     //Определение PB13 как SPI2_SCK
     GPIO_Enable_SPI(SPI2, SPI2_MISO_PORT, SPI2_MISO_PIN);   //Определение PB14 как SPI2_MISO
     GPIO_Enable_SPI(SPI2, SPI2_MOSI_PORT, SPI2_MOSI_PIN);   //Определение PB15 как SPI2_MOSI
-    //===Включение модуля SPI============================================
+
+	// Включение модуля SPI2
     SPI_Enable_Pin(SPI2);
     FM25Q08B_Reset(SPI2);
-    //=======================================================
+
+	/** Проверка работоспособности модуля SPI2 ************************************************************************/
+
     uint8_t unique_id[8];
     FM25Q08B_Read_Unique_ID(SPI2, unique_id);
 
