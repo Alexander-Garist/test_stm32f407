@@ -35,11 +35,6 @@
 #define data_2_byte_SIZE					(length_Transmitted_Data / 2)   // Размер массива 2-байтных данных
 #define send_SIZE							512								// Размер массива данных, заполненного буквами
 
-/** Defines для проверки SPI ******************************************************************************************/
-
-
-
-
 /** Переменные ********************************************************************************************************/
 static uint32_t time_delay = 100;				// Период моргания светодиодов в основном цикле while в тиках systick_counter
 
@@ -47,6 +42,7 @@ static uint32_t time_delay = 100;				// Период моргания свето
 volatile static uint32_t blink_mode = 0;		// 0 - моргают 4 светодиода быстро
 												// 1 - моргает зеленый со средней частотой
 												// 2 - моргает красный медленно
+
 uint8_t button_state = 0;						// Состояние кнопки нажата/не нажата
 uint32_t button_last_time = 0;					// Время последнего нажатия
 uint16_t data_2_byte[data_2_byte_SIZE];         // Массив двухбайтных данных 2048 чисел = 4096 байт
@@ -136,6 +132,37 @@ int main()
     GPIO_Enable_SPI(SPI2, SPI2_MISO_PORT, SPI2_MISO_PIN);   //Определение PB14 как SPI2_MISO
     GPIO_Enable_SPI(SPI2, SPI2_MOSI_PORT, SPI2_MOSI_PIN);   //Определение PB15 как SPI2_MOSI
 
+
+	LED_turnOFF_4_LED();
+
+
+
+	for (int i = 0; i < 10; i++)
+	{
+		if (is_time_passed_ms(500)) LED_turnON_4_LED();
+		//if (is_time_passed_ms(1000)) LED_turnOFF_4_LED();
+	}
+
+
+	delay_ms(5000);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	// Включение модуля SPI2
     SPI_Enable_Pin(SPI2);
     FM25Q08B_Reset(SPI2);
@@ -163,12 +190,12 @@ int main()
     uint8_t transmitted_data[FLASH_PAGE_SIZE * 2];      //256 чисел последовательно от 0x00 до 0xFF
     uint8_t received_data[FLASH_PAGE_SIZE * 2];
 
-    for(uint16_t i = 0; i < FLASH_PAGE_SIZE; i++)
+    for (uint16_t i = 0; i < FLASH_PAGE_SIZE; i++)
     {
         transmitted_data[i] = (uint8_t)i;//(uint8_t)i;
         received_data[i] = 55;  //изначально в received_data мусор
     }
-    for(uint16_t i = FLASH_PAGE_SIZE; i < FLASH_PAGE_SIZE * 2; i++)
+    for (uint16_t i = FLASH_PAGE_SIZE; i < FLASH_PAGE_SIZE * 2; i++)
     {
         transmitted_data[i] = 0xAA;//(uint8_t)i;
         received_data[i] = 55;  //изначально в received_data мусор
@@ -178,86 +205,48 @@ int main()
     //чтение
     FM25Q08B_Status_t reception_status, transmission_status, erasion_status;
     reception_status = FM25Q08B_Read(SPI2, FLASH_START_ADDRESS, received_data, FLASH_PAGE_SIZE * 2);
-    if(reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
-
-    /*   printf("\nдо записи 1 стр \n");
-    for(uint16_t i = 0; i < 32; i++)
-    {
-    if(i % 32 ==0)printf("\n");
-    printf("%02X ", received_data[i]);
-}
-
-    printf("\nдо записи 2 стр \n");
-    for(uint16_t i = FLASH_PAGE_SIZE; i < FLASH_PAGE_SIZE + 32; i++)
-    {
-    if(i % 32 ==0)printf("\n");
-    printf("%02X ", received_data[i]);
-}
-    */   //стирание и чтение
-    //erasion_status = FM25Q08B_Sector_Erase_4KB(SPI2, FLASH_START_ADDRESS);
-    //if(erasion_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 13);
+    if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
 
     erasion_status = FM25Q08B_Chip_Erase(SPI2);
-    if(erasion_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 13);
+    if (erasion_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 13);
 
     reception_status = FM25Q08B_Read(SPI2, FLASH_START_ADDRESS, received_data, FLASH_PAGE_SIZE);
-    if(reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
+    if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
 
-    /*   printf("\nпосле стирания received_data \n");
-    for(uint16_t i = 0; i < 32; i++)
-    {
-    if(i % 32 ==0)printf("\n");
-    printf("%02X ", received_data[i]);
-}
-    */
     //запись и чтение
     transmission_status = FM25Q08B_Write(SPI2, FLASH_START_ADDRESS, transmitted_data, FLASH_PAGE_SIZE * 2);
-    if(transmission_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 15);
+    if (transmission_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 15);
 
     reception_status = FM25Q08B_Read(SPI2, FLASH_START_ADDRESS, received_data, FLASH_PAGE_SIZE + FLASH_PAGE_SIZE);
-    if(reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
+    if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
 
-    /*   printf("\nпосле записи received_data 1 страница\n");
-    for(uint16_t i = 0; i < 64; i++)
-    {
-    if(i % 32 ==0)printf("\n");
-    printf("%02X ", received_data[i]);
-}
-
-    printf("\nпосле записи received_data 2 страница\n");
-    for(uint16_t i = FLASH_PAGE_SIZE; i < FLASH_PAGE_SIZE + 64; i++)
-    {
-    if(i % 32 ==0)printf("\n");
-    printf("%02X ", received_data[i]);
-}
-
-    */
 
 
 
     delay_ms(1000);
     LED_turnOFF_4_LED();
 
-    if((reception_status!=FM25Q08B_OK)|| (transmission_status!=FM25Q08B_OK)|| (erasion_status!=FM25Q08B_OK))GPIO_set_HIGH(GPIOD, 14);
+    if ((reception_status!=FM25Q08B_OK)|| (transmission_status!=FM25Q08B_OK)|| (erasion_status!=FM25Q08B_OK))GPIO_set_HIGH(GPIOD, 14);
     delay_ms(1000);
 
-    //==========================================================
+    /** Проверка работоспособности модуля I2C1 ************************************************************************/
+
     uint8_t Received_Data[length_Received_Data] = { 0 };
 
     uint8_t Error_Counter = 0;
-    while(Error_Counter < MAX_NUMBER_ATTEMPTS_CONNECT_EEPROM)                   //Попытки подключиться к EEPROM
+    while (Error_Counter < MAX_NUMBER_ATTEMPTS_CONNECT_EEPROM)                   //Попытки подключиться к EEPROM
     {
-        if(I2C_is_Device_Ready(I2C1, EEPROM_ADDRESS) == I2C_OK)                 //получилось подключиться => запись/чтение и выход из попыток
+        if (I2C_is_Device_Ready(I2C1, EEPROM_ADDRESS) == I2C_OK)                 //получилось подключиться => запись/чтение и выход из попыток
         {
             GPIO_set_HIGH(GPIOD, 15);   delay_ms(150);      //Синий моргнул - EEPROM готова
             GPIO_set_LOW(GPIOD, 15);    delay_ms(150);
 
             //Передача данных порциями по 4096 байт в цикле
-            for(uint32_t counter = 0; counter < length_All_Data / 2; counter += data_2_byte_SIZE)
+            for (uint32_t counter = 0; counter < length_All_Data / 2; counter += data_2_byte_SIZE)
             {
                 //printf("%d\n", counter);
                 //заполнить массив передаваемых данных
-                for(uint32_t i = 0; i < data_2_byte_SIZE; i++)//2048 * 2-byte
+                for (uint32_t i = 0; i < data_2_byte_SIZE; i++)//2048 * 2-byte
                 {
                     data_2_byte[i] = i + counter;
                 }
@@ -275,41 +264,41 @@ int main()
             //записать 2 страницы по 256 байт буквами с адреса 0x180 по адрес 0x380
 
             uint8_t Transmitted_Data[send_SIZE];
-            for(uint16_t i = 0; i < send_SIZE; i++)
+            for (uint16_t i = 0; i < send_SIZE; i++)
             {
                 Transmitted_Data[i] = 0x4A;
             }
 
             I2C_Status_t status_Transmission = BL24CM1A_Write(I2C1, EEPROM_ADDRESS, 0x180, Transmitted_Data, send_SIZE);
 
-            if(status_Transmission != I2C_OK) GPIO_set_HIGH(GPIOD, 14);
+            if (status_Transmission != I2C_OK) GPIO_set_HIGH(GPIOD, 14);
 
 
 
-            //Прием данных порциями по 4096 байт в цикле
-            for(uint32_t counter = 0; counter < length_All_Data / 2; counter += data_2_byte_SIZE)
+            // Прием данных порциями по 4096 байт в цикле
+            for (uint32_t counter = 0; counter < length_All_Data / 2; counter += data_2_byte_SIZE)
             {
                 uint32_t Reception_ADDRESS = START_ADDRESS + counter * 2;       //Адрес чтения одной порции данных
 
                 I2C_Status_t status_Reception = BL24CM1A_Read(I2C1, EEPROM_ADDRESS, Reception_ADDRESS, Received_Data, length_Received_Data);
-                if(status_Reception == I2C_OK) GPIO_set_HIGH(GPIOD, 15);
+                if (status_Reception == I2C_OK) GPIO_set_HIGH(GPIOD, 15);
                 else GPIO_set_HIGH(GPIOD, 14);
 
                 //вывести номер операции чтения
                 //printf("\nПрочитано 4096 байт, блок %d\n", counter / 2048);
                 //вывести первые 10 байт
-                for(int i = 0; i < length_Received_Data; i++)
+                for (int i = 0; i < length_Received_Data; i++)
                 {
-                    if(i % 32 == 0) printf("\n");
+                    if (i % 32 == 0) printf("\n");
                     //printf("%02X ", Received_Data[i]);
                 }
             }
-            GPIO_set_HIGH(GPIOD, 13);   //загорелся оранжевый - чтение окончено
+            GPIO_set_HIGH(GPIOD, 13);   // Загорелся оранжевый - чтение окончено
             break;
         }
-        if(I2C_is_Device_Ready(I2C1, EEPROM_ADDRESS) != I2C_OK)                 //не получилось за 10 попыток => просто выйти из цикла попыток и перейти к основному циклу
+        if (I2C_is_Device_Ready(I2C1, EEPROM_ADDRESS) != I2C_OK)		// Не получилось подключиться за 10 попыток => выйти из цикла попыток и перейти к основному циклу
         {
-            GPIO_set_HIGH(GPIOD, 14);   delay_ms(150);      //Красный моргнул - EEPROM не готова
+            GPIO_set_HIGH(GPIOD, 14);   delay_ms(150);					// Красный моргнул - EEPROM не готова
             GPIO_set_LOW(GPIOD, 14);    delay_ms(150);
             Error_Counter++;
         }
@@ -317,17 +306,17 @@ int main()
 
 
 
-    //==========Основной цикл мигание светодиодов и обработка нажатий кнопки=============================================================================================
-    uint32_t timeON = get_current_time();       //Момент отсчета времени для основного цикла
-    while(1)
+    /**************** Основной цикл: мигание светодиодов и обработка нажатий кнопки ***********************************/
+    uint32_t timeON = get_current_time();       // Момент отсчета времени для основного цикла
+    while (1)
     {
-        if(is_time_passed(timeON, time_delay))
+        if (is_time_passed(timeON, time_delay))
         {
             LED_turnOFF_4_LED();
         }
-        if(is_time_passed(timeON, time_delay * 2))
+        if (is_time_passed(timeON, time_delay * 2))
         {
-            switch(blink_mode)
+            switch (blink_mode)
             {
                 case 0: GPIO_set_HIGH(GPIOD, 12);   break;
                 case 1: GPIO_set_HIGH(GPIOD, 13);   break;

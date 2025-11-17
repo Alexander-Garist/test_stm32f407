@@ -76,27 +76,27 @@ void SPI_Enable_Pin(SPI_TypeDef* SPIx);
 	/**
 	! Функция отправки данных по шине SPI
 	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	- data - указатель на массив отправляемых данных
-	- size - объем передаваемых данных в байтах
+	- SPI_data - указатель на массив отправляемых данных
+	- SPI_size - объем передаваемых данных в байтах
 	return: статус выполнения отправки данных (если отправка успешна, вернет SPI_OK)
 	*/
 SPI_Status_t SPI_Transmit(
 	SPI_TypeDef *	SPIx,
-	uint8_t *		data,
-	uint32_t		size
+	uint8_t *		SPI_data,
+	uint32_t		SPI_size
 );
 
 	/**
 	! Функция приема данных по шине SPI
 	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	- data - указатель на массив, в который запишутся принятые данные
-	- size - объем принимаемых данных в байтах
+	- SPI_data - указатель на массив, в который запишутся принятые данные
+	- SPI_size - объем принимаемых данных в байтах
 	return: статус выполнения приема данных (если прием успешен, вернет SPI_OK)
 	*/
 SPI_Status_t SPI_Receive(
 	SPI_TypeDef *	SPIx,
-	uint8_t *		data,
-	uint32_t		size
+	uint8_t *		SPI_data,
+	uint32_t		SPI_size
 );
 
 #endif /*__SPI_H__ */

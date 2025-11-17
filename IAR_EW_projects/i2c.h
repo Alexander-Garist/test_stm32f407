@@ -39,12 +39,12 @@ void I2C_Enable_Pin( I2C_TypeDef* I2Cx );
 	! Функция I2C_is_Device_Ready определяет, готово ли устройство, подключенное
 		к шине I2C, к работе.
 	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- device_addr - адрес подключенного по I2C устройства
+	- I2C_device_addr - адрес подключенного по I2C устройства
 	return: статус готовности
 	*/
 I2C_Status_t I2C_is_Device_Ready(
 	I2C_TypeDef *	I2Cx,
-	uint8_t			device_addr
+	uint8_t			I2C_device_addr
 );
 
 /********************** Функции чтения/записи I2C *****************************/
@@ -52,31 +52,31 @@ I2C_Status_t I2C_is_Device_Ready(
 	/**
 	! Функция I2C_Write отправляет по шине I2C данные
 	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- device_addr - адрес подключенного по I2C устройства
-	- data - данные для отправки
-	- size - объем данных для отправки
+	- I2C_device_addr - адрес подключенного по I2C устройства
+	- I2C_data - данные для отправки
+	- I2C_size - объем данных для отправки
 	return: статус выполнения
 	*/
 I2C_Status_t I2C_Write(
 	I2C_TypeDef *	I2Cx,
-	uint8_t			device_addr,
-	uint8_t *		data,
-	uint16_t		size
+	uint8_t			I2C_device_addr,
+	uint8_t *		I2C_data,
+	uint16_t		I2C_size
 );
 
 	/**
 	! Функция I2C_Read принимает по шине I2C данные
 	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- device_addr - адрес подключенного по I2C устройства
-	- data - принятые данные
-	- size - объем принятых данных
+	- I2C_device_addr - адрес подключенного по I2C устройства
+	- I2C_data - принятые данные
+	- I2C_size - объем принятых данных
 	return: статус выполнения
 	*/
 I2C_Status_t I2C_Read(
 	I2C_TypeDef *	I2Cx,
-	uint8_t			device_addr,
-	uint8_t *		data,
-	uint16_t		size
+	uint8_t			I2C_device_addr,
+	uint8_t *		I2C_data,
+	uint16_t		I2C_size
 );
 
 /*************** Функция для отладки работы модуля I2C ************************/

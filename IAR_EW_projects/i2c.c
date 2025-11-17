@@ -52,17 +52,17 @@ static void I2C_Init_Pin(I2C_TypeDef* I2Cx)
 	/**
 	! Функция ожидания установки флага состояния SR1
 	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- flag - маска флага, который должен установиться
-	- timeout - максимальное время ожидания установки флага
+	- I2C_flag - маска флага, который должен установиться
+	- I2C_timeout - максимальное время ожидания установки флага
 	return: статус выполнения установки флага (если успешно установился в
-		пределах времени timeout, то I2C_OK)
+		пределах времени I2C_timeout, то I2C_OK)
 	*/
-static I2C_Status_t I2C_Wait_Flag_SR1(I2C_TypeDef* I2Cx, uint16_t flag, uint32_t timeout)
+static I2C_Status_t I2C_Wait_Flag_SR1(I2C_TypeDef* I2Cx, uint16_t I2C_flag, uint32_t I2C_timeout)
 {
     uint32_t start_time = get_current_time();
-    while (!(I2Cx->SR1 & flag))
+    while (!(I2Cx->SR1 & I2C_flag))
     {
-        if (is_time_passed(start_time, timeout)) return I2C_FLAG_TIMEOUT;
+        if (is_time_passed(start_time, I2C_timeout)) return I2C_FLAG_TIMEOUT;
     }
     return I2C_OK;
 }
@@ -70,16 +70,16 @@ static I2C_Status_t I2C_Wait_Flag_SR1(I2C_TypeDef* I2Cx, uint16_t flag, uint32_t
 	/**
 	! Функция ожидания освобождения шины I2C
 	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- timeout - максимальное время ожидания освобождения шины I2C
+	- I2C_timeout - максимальное время ожидания освобождения шины I2C
 	return: статус выполнения освобождения шины (если успешно освободилась в
-		пределах времени timeout, то I2C_OK)
+		пределах времени I2C_timeout, то I2C_OK)
 	*/
-static I2C_Status_t I2C_Wait_Bus_Busy(I2C_TypeDef* I2Cx, uint32_t timeout)
+static I2C_Status_t I2C_Wait_Bus_Busy(I2C_TypeDef* I2Cx, uint32_t I2C_timeout)
 {
     uint32_t start_time = get_current_time();
     while (I2Cx->SR2 & I2C_SR2_BUSY)
     {
-        if (is_time_passed(start_time, timeout)) return I2C_FLAG_TIMEOUT;
+        if (is_time_passed(start_time, I2C_timeout)) return I2C_FLAG_TIMEOUT;
     }
     return I2C_OK;
 }
@@ -89,19 +89,19 @@ static I2C_Status_t I2C_Wait_Bus_Busy(I2C_TypeDef* I2Cx, uint32_t timeout)
 	/**
 	! Начало передачи по I2C, генерация состояния START
 	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- address - 7-битный адрес устройства, подключенного к шине I2C
-	- direction - выбор чтение или запись по I2C:
+	- I2C_address - 7-битный адрес устройства, подключенного к шине I2C
+	- I2C_direction - выбор чтение или запись по I2C:
 		0 - запрос на запись, 1 - запрос на чтение
 	return: статус выполнения генерации состояния START
 	*/
-static I2C_Status_t I2C_Start(I2C_TypeDef* I2Cx, uint8_t address, uint8_t direction)
+static I2C_Status_t I2C_Start(I2C_TypeDef* I2Cx, uint8_t I2C_address, uint8_t I2C_direction)
 {
     //Генерация START
     I2Cx->CR1 |= I2C_CR1_START;
     if (I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_SB, 10) != I2C_OK) return I2C_ERROR_START;
 
     //Отправка запроса
-    I2Cx->DR = (address << 1) | direction;
+    I2Cx->DR = (I2C_address << 1) | I2C_direction;
     if (I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_ADDR, 10) != I2C_OK) return I2C_ERROR_START;
 
     (void)I2Cx->SR2;	//Очистка ADDR
@@ -134,13 +134,13 @@ void I2C_Enable_Pin(I2C_TypeDef* I2Cx)
 	! Функция I2C_is_Device_Ready определяет, готово ли устройство, подключенное
 		к шине I2C, к работе.
 	- I2Cx - выбранный модуль I2C
-	- device_addr - адрес подключенного по I2C устройства
+	- I2C_device_addr - адрес подключенного по I2C устройства
 	return: статус готовности
 	*/
-I2C_Status_t I2C_is_Device_Ready(I2C_TypeDef* I2Cx, uint8_t device_addr)
+I2C_Status_t I2C_is_Device_Ready(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr)
 {
     I2C_Status_t status = I2C_OK;
-    if (I2C_Start(I2Cx, device_addr, 0) != I2C_OK) status = I2C_DEVICE_NO_ANSWER;
+    if (I2C_Start(I2Cx, I2C_device_addr, 0) != I2C_OK) status = I2C_DEVICE_NO_ANSWER;
     I2C_Stop(I2Cx);
     return status;
 }
@@ -148,11 +148,11 @@ I2C_Status_t I2C_is_Device_Ready(I2C_TypeDef* I2Cx, uint8_t device_addr)
 	/**
 	! Функция I2C_Status_Report выводит статус выполнения функции I2C для
 		отладки
-	- Function_Status - статус выполнения
+	- I2C_Function_Status - статус выполнения
 	*/
-void I2C_Status_Report(I2C_Status_t Function_Status)
+void I2C_Status_Report(I2C_Status_t I2C_Function_Status)
 {
-    switch (Function_Status)
+    switch (I2C_Function_Status)
     {
         case (I2C_OK):                  printf("\n I2C_OK \n");                 break;
         case (I2C_DATA_NULL):           printf("\n I2C_DATA_NULL \n");          break;
@@ -170,29 +170,29 @@ void I2C_Status_Report(I2C_Status_t Function_Status)
 	/**
 	! Функция I2C_Write отправляет по шине I2C данные
 	- I2Cx - выбранный модуль I2C
-	- device_addr - адрес подключенного по I2C устройства
-	- data - данные для отправки
-	- size - объем данных для отправки
+	- I2C_device_addr - адрес подключенного по I2C устройства
+	- I2C_data - данные для отправки
+	- I2C_size - объем данных для отправки
 	return: статус выполнения
 	*/
-I2C_Status_t I2C_Write(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uint16_t size)
+I2C_Status_t I2C_Write(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr, uint8_t* I2C_data, uint16_t I2C_size)
 {
 	//Ожидание освобождения шины I2C, шина освобождается после генерации состояния STOP на шине
     if (I2C_Wait_Bus_Busy(I2Cx, 10) != I2C_OK) return I2C_BUS_IS_BUSY;
 	//Генерация состояния START и отправка запроса на запись подключенному устройству
-    if (I2C_Start(I2Cx, device_addr, 0) != I2C_OK) return I2C_ERROR_START;
+    if (I2C_Start(I2Cx, I2C_device_addr, 0) != I2C_OK) return I2C_ERROR_START;
 
     //Отправка данных
-    for (uint16_t i = 0; i < size; i++)
+    for (uint16_t i = 0; i < I2C_size; i++)
     {
-        I2Cx->DR = data[i];
+        I2Cx->DR = I2C_data[i];
         I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_TXE, 10);
     }
 
     I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_BTF, 10);
     I2C_Stop(I2Cx);		//Генерация состояния STOP
 	//Проверка окончания соединения по I2C (попытка генерации повторного состояния START)
-    while (I2C_Start(I2Cx, device_addr, 0) != I2C_OK)
+    while (I2C_Start(I2Cx, I2C_device_addr, 0) != I2C_OK)
     {
         delay_ms(1);
     }
@@ -203,21 +203,21 @@ I2C_Status_t I2C_Write(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, ui
 	/**
 	! Функция I2C_Read принимает по шине I2C данные
 	- I2Cx - выбранный модуль I2C
-	- device_addr - адрес подключенного по I2C устройства
-	- data - принятые данные
-	- size - объем принятых данных
+	- I2C_device_addr - адрес подключенного по I2C устройства
+	- I2C_data - принятые данные
+	- I2C_size - объем принятых данных
 	return: статус выполнения
 	*/
-I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uint16_t size)
+I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr, uint8_t* I2C_data, uint16_t I2C_size)
 {
-    if (data == NULL) return I2C_DATA_NULL;
+    if (I2C_data == NULL) return I2C_DATA_NULL;
 
     //Ожидание освобождения шины I2C, шина освобождается после генерации состояния STOP на шине
     if (I2C_Wait_Bus_Busy(I2Cx, 10) != I2C_OK) return I2C_BUS_IS_BUSY;
 	//Генерация состояния START и отправка запроса на чтение подключенному устройству
-    if (I2C_Start(I2Cx, device_addr, 1) != I2C_OK) return I2C_ERROR_START;
+    if (I2C_Start(I2Cx, I2C_device_addr, 1) != I2C_OK) return I2C_ERROR_START;
 
-    if (size > 1){
+    if (I2C_size > 1){
         I2Cx->CR1 |= I2C_CR1_ACK;        //Чтение нескольких байт, установка Acknowledge Enable
     }
     else{
@@ -225,15 +225,15 @@ I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uin
     }
     (void)I2Cx->SR2;
 
-    for (uint16_t i = 0; i < size; i++)
+    for (uint16_t i = 0; i < I2C_size; i++)
     {
-        if (i == size - 1)       //При чтении последнего байта сбросить флаг ACK и остановить прием данных
+        if (i == I2C_size - 1)       //При чтении последнего байта сбросить флаг ACK и остановить прием данных
         {
             I2Cx->CR1 &= ~I2C_CR1_ACK;
             I2C_Stop(I2Cx);
         }
         I2C_Wait_Flag_SR1(I2Cx, I2C_SR1_RXNE, 10);
-        data[i] = I2Cx->DR;
+        I2C_data[i] = I2Cx->DR;
     }
     return I2C_OK;
 }

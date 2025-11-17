@@ -13,17 +13,17 @@
 	! Статическая функция SPI_Wait_Set_Flag_SR реализует ожидание установки
 		флага состояния SR с заданным пределом времени ожидания.
 	- SPIx - выбранный модуль SPI (SPI1, SPI2, SPI3)
-	- flag - маска флага, который должен установиться
-	- timeout - максимальное время ожидания установки флага
+	- SPI_flag - маска флага, который должен установиться
+	- SPI_timeout - максимальное время ожидания установки флага
 	return: статус выполнения установки флага (если успешно установился в
-		пределах времени timeout, то SPI_OK)
+		пределах времени SPI_timeout, то SPI_OK)
 	*/
-static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t flag, uint32_t timeout)
+static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag, uint32_t SPI_timeout)
 {
     uint32_t start_time = get_current_time();
-    while (!(SPIx->SR & flag))   // Ожидание пока флаг не установлен
+    while (!(SPIx->SR & SPI_flag))   // Ожидание пока флаг не установлен
     {
-        if (is_time_passed(start_time, timeout)) return SPI_FLAG_TIMEOUT;
+        if (is_time_passed(start_time, SPI_timeout)) return SPI_FLAG_TIMEOUT;
     }
     return SPI_OK;
 }
@@ -32,17 +32,17 @@ static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t flag, uint3
 	! Статическая функция SPI_Wait_Set_Flag_SR реализует ожидание сброса
 		флага состояния SR с заданным пределом времени ожидания.
 	- SPIx - выбранный модуль SPI (SPI1, SPI2, SPI3)
-	- flag - маска флага, который должен сброситься
-	- timeout - максимальное время ожидания сброса флага
+	- SPI_flag - маска флага, который должен сброситься
+	- SPI_timeout - максимальное время ожидания сброса флага
 	return: статус выполнения сброса флага (если успешно сброшен в
-		пределах времени timeout, то SPI_OK)
+		пределах времени SPI_timeout, то SPI_OK)
 	*/
-static SPI_Status_t SPI_Wait_Clear_Flag_SR(SPI_TypeDef* SPIx, uint16_t flag, uint32_t timeout)
+static SPI_Status_t SPI_Wait_Clear_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag, uint32_t SPI_timeout)
 {
     uint32_t start_time = get_current_time();
-    while ((SPIx->SR & flag))    // Ожидание пока флаг установлен
+    while ((SPIx->SR & SPI_flag))    // Ожидание пока флаг установлен
     {
-        if (is_time_passed(start_time, timeout)) return SPI_FLAG_TIMEOUT;
+        if (is_time_passed(start_time, SPI_timeout)) return SPI_FLAG_TIMEOUT;
     }
     return SPI_OK;
 }
@@ -96,17 +96,17 @@ void SPI_Enable_Pin(SPI_TypeDef* SPIx)
 	/**
 	! Функция отправки данных по шине SPI
 	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	- data - указатель на массив отправляемых данных
-	- size - объем передаваемых данных в байтах
+	- SPI_data - указатель на массив отправляемых данных
+	- SPI_size - объем передаваемых данных в байтах
 	return: статус выполнения отправки данных (если отправка успешна, вернет SPI_OK)
 	*/
-SPI_Status_t SPI_Transmit(SPI_TypeDef* SPIx, uint8_t* data, uint32_t size)
+SPI_Status_t SPI_Transmit(SPI_TypeDef* SPIx, uint8_t* SPI_data, uint32_t SPI_size)
 {
-    for (uint32_t i = 0; i < size; i++)
+    for (uint32_t i = 0; i < SPI_size; i++)
     {
 		// TXE==1 означает что буфер передатчика освободился и можно в него внести новый байт данных
         if (SPI_Wait_Set_Flag_SR(SPIx, SPI_SR_TXE, 10) != SPI_OK) return SPI_ERROR_WRITE;	// Ожидание установки флага SPI_SR_TXE с таймаутом 10 мс
-		SPIx->DR = data[i];																	// Запись байта данных в регистр данных
+		SPIx->DR = SPI_data[i];																	// Запись байта данных в регистр данных
     }
 	if (SPI_Wait_Set_Flag_SR(SPIx, SPI_SR_TXE, 10) != SPI_OK) return SPI_ERROR_WRITE;		//  Ожидание установки флага SPI_SR_TXE с таймаутом 10 мс
 
@@ -124,20 +124,20 @@ SPI_Status_t SPI_Transmit(SPI_TypeDef* SPIx, uint8_t* data, uint32_t size)
 	/**
 	! Функция приема данных по шине SPI
 	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	- data - указатель на массив, в который запишутся принятые данные
-	- size - объем принимаемых данных в байтах
+	- SPI_data - указатель на массив, в который запишутся принятые данные
+	- SPI_size - объем принимаемых данных в байтах
 	return: статус выполнения приема данных (если прием успешен, вернет SPI_OK)
 	*/
-SPI_Status_t SPI_Receive(SPI_TypeDef* SPIx, uint8_t* data, uint32_t size)
+SPI_Status_t SPI_Receive(SPI_TypeDef* SPIx, uint8_t* SPI_data, uint32_t SPI_size)
 {
-    while (size)
+    while (SPI_size)
 	{
 		SPIx->DR = 0;    // Запуск обмена
 
         // RXNE==1 означает что в буфере приемника появился байт данных
         if (SPI_Wait_Set_Flag_SR(SPIx, SPI_SR_RXNE, 10) != SPI_OK) return SPI_ERROR_READ;	// Ожидание установки флага SPI_SR_RXNE с таймаутом 10 мс
-		*data++ = (SPIx->DR);																// Чтение байта данных из регистра в массив data
-		size--;
+		*SPI_data++ = (SPIx->DR);															// Чтение байта данных из регистра в массив SPI_data
+		SPI_size--;
 	}
 
 	// В случае успешного завершения работы функции статус SPI_OK

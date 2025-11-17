@@ -35,32 +35,32 @@ typedef enum
 	/**
 	! Функция EXTI_Enable_Pin включает обработку внешних прерываний на выбранном
 		пине и задает триггер, который будет вызывать прерывание.
-	- port - порт GPIO
-	- pin - пин GPIO
-	- trigger - триггер, вызывающий прерывание
+	- EXTI_port - порт GPIO
+	- EXTI_pin - пин GPIO
+	- EXTI_trigger - триггер, вызывающий прерывание
 	*/
 void EXTI_Enable_Pin(
-	EXTI_Port	port,
-	uint32_t	pin,
-	uint32_t	trigger
+	EXTI_Port	EXTI_port,
+	uint32_t	EXTI_pin,
+	uint32_t	EXTI_trigger
 );
 
 	/**
 	! Функция EXTI_Disable_Pin выключает обработку внешних прерываний на
 		выбранном пине.
-	- port - порт GPIO
-	- pin - пин GPIO
+	- EXTI_port - порт GPIO
+	- EXTI_pin - пин GPIO
 	*/
 void EXTI_Disable_Pin(
-	EXTI_Port	port,
-	uint32_t	pin
+	EXTI_Port	EXTI_port,
+	uint32_t	EXTI_pin
 );
 
 /**
 	! Функция EXTI_Clear_Flag сбрасывает флаг ожидания на выбранном пине.
 		Функция вызывается в обработчиках внешних прерываний.
-	- pin - пин GPIO
+	- EXTI_pin - пин GPIO
 */
-void EXTI_Clear_Flag(uint32_t pin);
+void EXTI_Clear_Flag(uint32_t EXTI_pin);
 
 #endif /*__EXTI_H__ */
