@@ -1,9 +1,17 @@
-#ifndef I2C_H
-#define I2C_H
+/**
+  * @file    i2c.h
+  * @brief   Файл содержит прототипы функций I2C
+  */
 
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __I2C_H__
+#define __I2C_H__
+
+/* Includes ------------------------------------------------------------------*/
 #include "CMSIS/stm32f4xx.h"
 #include "systick.h"
 
+/************* Перечисление статусов выполнения функций I2C *******************/
 typedef enum
 {
     I2C_OK =                0,  //Функция успешно отработала
@@ -17,16 +25,54 @@ typedef enum
     I2C_ERROR_STOP =        8   //Ошибка генерации состояния STOP
 }I2C_Status_t;
 
-void I2C_Enable_Pin(I2C_TypeDef* I2Cx);                                         //Разрешение использовать конкретный I2C (I2C1, I2C2, I2C3), нужно использовать после настройки GPIO
-I2C_Status_t I2C_is_Device_Ready(I2C_TypeDef* I2Cx, uint8_t device_addr);         //Проверка готовности подключенного устройства
+/********************** Глобальные функции ************************************/
 
-//Только для чтения/записи памяти по I2C
-I2C_Status_t I2C_Write_MEMORY(I2C_TypeDef* I2Cx, uint8_t device_addr, uint16_t reg_addr, uint8_t* data, uint16_t size);    //Запись в память
-I2C_Status_t I2C_Read_MEMORY(I2C_TypeDef* I2Cx, uint8_t device_addr, uint16_t reg_addr, uint8_t* data, uint16_t size);     //Чтение из памяти
+/** Функции инициализации модуля I2C и проверки готовности подключенного устройства**/
+/**
+	! Функция I2C_Enable_Pin разрешает использовать выбранный модуль I2C.
+		Функция вызывается после настройки GPIO.
+	- I2Cx - выбранный модуль I2C
+*/
+void I2C_Enable_Pin(I2C_TypeDef* I2Cx);
 
-//Общий случай общения по I2C
-I2C_Status_t I2C_Write(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uint16_t size);    //Запись
-I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uint16_t size);     //Чтение
+/**
+	! Функция I2C_is_Device_Ready определяет, готово ли устройство, подключенное
+		к шине I2C, к работе.
+	- I2Cx - выбранный модуль I2C
+	- device_addr - адрес подключенного по I2C устройства
+	+ статус готовности
+*/
+I2C_Status_t I2C_is_Device_Ready(I2C_TypeDef* I2Cx, uint8_t device_addr);
 
+/********************** Функции чтения/записи I2C *****************************/
+
+/**
+	! Функция I2C_Write отправляет по шине I2C данные
+	- I2Cx - выбранный модуль I2C
+	- device_addr - адрес подключенного по I2C устройства
+	- data - данные для отправки
+	- size - объем данных для отправки
+	+ статус выполнения
+*/
+I2C_Status_t I2C_Write(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uint16_t size);
+
+/**
+	! Функция I2C_Read принимает по шине I2C данные
+	- I2Cx - выбранный модуль I2C
+	- device_addr - адрес подключенного по I2C устройства
+	- data - принятые данные
+	- size - объем принятых данных
+	+ статус выполнения
+*/
+I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t device_addr, uint8_t* data, uint16_t size);
+
+/*************** Функция для отладки работы модуля I2C ************************/
+
+/**
+	! Функция I2C_Status_Report выводит статус выполнения функции I2C для
+		отладки
+	- статус выполнения
+*/
 void I2C_Status_Report(I2C_Status_t Function_Status);
-#endif
+
+#endif /*__I2C_H__ */
