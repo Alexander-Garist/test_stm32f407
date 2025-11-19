@@ -20,10 +20,10 @@
 	*/
 static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag, uint32_t SPI_timeout)
 {
-    uint32_t start_time = get_current_time();
+    uint32_t start_time = get_current_ms();
     while (!(SPIx->SR & SPI_flag))   // Ожидание пока флаг не установлен
     {
-        if (is_time_passed(start_time, SPI_timeout)) return SPI_FLAG_TIMEOUT;
+        if (is_time_passed_ms(start_time, SPI_timeout)) return SPI_FLAG_TIMEOUT;
     }
     return SPI_OK;
 }
@@ -39,10 +39,10 @@ static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag, u
 	*/
 static SPI_Status_t SPI_Wait_Clear_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag, uint32_t SPI_timeout)
 {
-    uint32_t start_time = get_current_time();
+    uint32_t start_time = get_current_ms();
     while ((SPIx->SR & SPI_flag))    // Ожидание пока флаг установлен
     {
-        if (is_time_passed(start_time, SPI_timeout)) return SPI_FLAG_TIMEOUT;
+        if (is_time_passed_ms(start_time, SPI_timeout)) return SPI_FLAG_TIMEOUT;
     }
     return SPI_OK;
 }

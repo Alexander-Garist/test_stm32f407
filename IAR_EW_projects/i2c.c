@@ -59,10 +59,10 @@ static void I2C_Init_Pin(I2C_TypeDef* I2Cx)
 	*/
 static I2C_Status_t I2C_Wait_Flag_SR1(I2C_TypeDef* I2Cx, uint16_t I2C_flag, uint32_t I2C_timeout)
 {
-    uint32_t start_time = get_current_time();
+    uint32_t start_time = get_current_ms();
     while (!(I2Cx->SR1 & I2C_flag))
     {
-        if (is_time_passed(start_time, I2C_timeout)) return I2C_FLAG_TIMEOUT;
+        if (is_time_passed_ms(start_time, I2C_timeout)) return I2C_FLAG_TIMEOUT;
     }
     return I2C_OK;
 }
@@ -76,10 +76,10 @@ static I2C_Status_t I2C_Wait_Flag_SR1(I2C_TypeDef* I2Cx, uint16_t I2C_flag, uint
 	*/
 static I2C_Status_t I2C_Wait_Bus_Busy(I2C_TypeDef* I2Cx, uint32_t I2C_timeout)
 {
-    uint32_t start_time = get_current_time();
+    uint32_t start_time = get_current_ms();
     while (I2Cx->SR2 & I2C_SR2_BUSY)
     {
-        if (is_time_passed(start_time, I2C_timeout)) return I2C_FLAG_TIMEOUT;
+        if (is_time_passed_ms(start_time, I2C_timeout)) return I2C_FLAG_TIMEOUT;
     }
     return I2C_OK;
 }

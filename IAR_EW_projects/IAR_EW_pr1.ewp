@@ -2133,6 +2133,9 @@
     <group>
         <name>inc</name>
         <file>
+            <name>$PROJ_DIR$\AD9833.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\BL24CM1A.h</name>
         </file>
         <file>
@@ -2156,6 +2159,9 @@
     </group>
     <group>
         <name>src</name>
+        <file>
+            <name>$PROJ_DIR$\AD9833.c</name>
+        </file>
         <file>
             <name>$PROJ_DIR$\BL24CM1A.c</name>
         </file>
