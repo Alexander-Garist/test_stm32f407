@@ -155,11 +155,12 @@ int main()
     uint16_t manufacturer_device_ID = FM25Q08B_Read_Manufacturer_ID(SPI2);
     printf("Manufacturer/Device ID: %04X\n", manufacturer_device_ID);
 */
-
+    
     //uint8_t transmitted_data[FLASH_PAGE_SIZE];
     uint8_t received_data[FLASH_PAGE_SIZE];
 
-    for (uint16_t i = 0; i < FLASH_PAGE_SIZE; i++)
+
+    for (uint16_t i = 0; i < FLASH_SECTOR_SIZE; i++)
     {
         received_data[i] = 55;  // Изначально в received_data мусор
     }
@@ -203,6 +204,7 @@ int main()
     /************************************* Проверка записи и чтения ***************************************************/
 
 	//printf("Проверка записи\n");
+
 	uint8_t transmitted_data_test[FLASH_PAGE_SIZE];
 	uint8_t received_data_test[FLASH_PAGE_SIZE];
 
@@ -342,6 +344,7 @@ int main()
         {
 			LED_turnOFF_4_LED();
         }
+
         if (is_time_passed_ms(start, time_delay * 2))	// Вторая половина цикла: светодиоды включаются в соответствии с выбранным режимом
         {
 			switch (blink_mode)
