@@ -137,7 +137,7 @@ int main()
     SPI_Enable_Pin(SPI2);
     FM25Q08B_Reset(SPI2);
 
-	/** Проверка работоспособности модуля SPI2 ************************************************************************/
+	/*********************************** Проверка работоспособности модуля SPI2 ***************************************/
 
     uint8_t unique_id[8];
     FM25Q08B_Read_Unique_ID(SPI2, unique_id);
@@ -155,25 +155,25 @@ int main()
     uint16_t manufacturer_device_ID = FM25Q08B_Read_Manufacturer_ID(SPI2);
     printf("Manufacturer/Device ID: %04X\n", manufacturer_device_ID);
 */
+    
+    //uint8_t transmitted_data[FLASH_PAGE_SIZE];
+    uint8_t received_data[FLASH_PAGE_SIZE];
 
-    //uint8_t transmitted_data[FLASH_PAGE_SIZE * 2];      //256 чисел последовательно от 0x00 до 0xFF
-    uint8_t received_data[FLASH_PAGE_SIZE * 2];
 
     for (uint16_t i = 0; i < FLASH_SECTOR_SIZE; i++)
     {
-        //transmitted_data[i] = (uint8_t)i;//(uint8_t)i;
-        received_data[i] = 55;  //изначально в received_data мусор
+        received_data[i] = 55;  // Изначально в received_data мусор
     }
-    for (uint16_t i = FLASH_PAGE_SIZE; i < FLASH_PAGE_SIZE * 2; i++)
-    {
-       // transmitted_data[i] = 0xAA;//(uint8_t)i;
-        received_data[i] = 55;  //изначально в received_data мусор
-    }
-
 
     /************************************* Проверка чтения ************************************************************/
+
     FM25Q08B_Status_t reception_status, transmission_status, erasion_status;
-    reception_status = FM25Q08B_Read(SPI2, FLASH_START_ADDRESS, received_data, FLASH_PAGE_SIZE * 2);
+    reception_status = FM25Q08B_Read(
+		SPI2,
+		FLASH_START_ADDRESS,	// Адрес памяти модуля памяти, с которого начинается чтение
+		received_data,			// Указатель на массив данных, в который записываются считанные данные
+		FLASH_PAGE_SIZE			// Количество считанных байт
+	);
     if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
 /*
 	printf("Проверка чтения\n");
@@ -183,10 +183,16 @@ int main()
 	}
 */
 	/************************************** Проверка стирания памяти **************************************************/
+
     erasion_status = FM25Q08B_Chip_Erase(SPI2);
     if (erasion_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 13);
 
-    reception_status = FM25Q08B_Read(SPI2, FLASH_START_ADDRESS, received_data, FLASH_PAGE_SIZE);
+    reception_status = FM25Q08B_Read(
+		SPI2,
+		FLASH_START_ADDRESS,	// Адрес памяти модуля памяти, с которого начинается чтение
+		received_data, 			// Указатель на массив данных, в который записываются считанные данные
+		FLASH_PAGE_SIZE			// Количество считанных байт
+	);
     if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
 /*
 	printf("Проверка стирания памяти\n");
@@ -199,27 +205,47 @@ int main()
 
 	//printf("Проверка записи\n");
 
-	//сформировать данные для отправки
-	// заполнение массива 1-байтных данных из 2048 чисел
-	uint8_t transmitted_data_test[FLASH_PAGE_SIZE * 5];
-	uint8_t received_data_test[FLASH_PAGE_SIZE * 5];
-	uint32_t address_offset = 0x100;	// одна страница 256 байт
+	uint8_t transmitted_data_test[FLASH_PAGE_SIZE];
+	uint8_t received_data_test[FLASH_PAGE_SIZE];
 
-	for(uint16_t number = 0; number < 4096; number++)	// number это номер отправленной страницы данных 256 байт
+	// Одна страница 256 байт (0x100)
+	uint32_t page_addr_offset = 0x100;
+
+	/** В цикле заполняется массив отправляемых данных 256 байт (1 страница),
+		отправляется и считываются данные в массив принятых данных.
+		Каждая следующая страница имеет свой начальный адрес, поэтому в функциях FM25Q08B_Write и FM25Q08B_Read
+		начальный адрес памяти вычисляется по формуле:
+		page_address = flash_start_address + page_number * page_addr_offset
+		где page_address - начальный адрес страницы
+			flash_start_address - начальный адрес памяти (0x000000)
+			page_number - номер текущей страницы (0 - 4095)
+			page_addr_offset - объем одной страницы (256 байт == 0x100)
+	*/
+	for(uint16_t page_number = 0; page_number < 4096; page_number++)
 	{
-		// записали страницу
+		// Заполнение массива отправляемых данных
 		for(uint16_t i = 0; i < FLASH_PAGE_SIZE; i++)
 		{
-			transmitted_data_test[i] = number;
+			transmitted_data_test[i] = page_number;
 		}
 
-		transmission_status = FM25Q08B_Write(SPI2, FLASH_START_ADDRESS + address_offset * number, transmitted_data_test, FLASH_PAGE_SIZE);
+		transmission_status = FM25Q08B_Write(
+			SPI2,
+			FLASH_START_ADDRESS + page_addr_offset * page_number,	// Адрес памяти модуля памяти, с которого начинается запись
+			transmitted_data_test,									// Указатель на массив данных, которые записываются в память
+			FLASH_PAGE_SIZE											// Количество записанных байт
+		);
 		if (transmission_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 15);
 
-		reception_status = FM25Q08B_Read(SPI2, FLASH_START_ADDRESS + address_offset * number, received_data_test, FLASH_PAGE_SIZE);
+		reception_status = FM25Q08B_Read(
+			SPI2,
+			FLASH_START_ADDRESS + page_addr_offset * page_number,	// Адрес памяти модуля памяти, с которого начинается чтение
+			received_data_test,										// Указатель на массив данных, в который записываются считанные данные
+			FLASH_PAGE_SIZE											// Количество считанных байт
+		);
 		if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
 /*
-		printf("Номер блока 2048 B: %d\n", number);
+		printf("Номер страницы: %d\n", page_number);
 		for (uint8_t i = 0; i < 3; i++)
 		{
 			printf("received_data[%d] = 0x%02X\n", i, received_data_test[i]);
@@ -227,28 +253,16 @@ int main()
 		printf("\n");
 */
 	}
-
-
-
-/*
-    transmission_status = FM25Q08B_Write(SPI2, FLASH_START_ADDRESS, transmitted_data, FLASH_PAGE_SIZE * 2);
-    if (transmission_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 15);
-
-    reception_status = FM25Q08B_Read(SPI2, FLASH_START_ADDRESS, received_data, FLASH_PAGE_SIZE * 2);
-    if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
-
-
-	for (uint32_t i = 0; i < 10; i++)
-	{
-		printf("received_data[%d] = 0x%02X\n", i, received_data[i]);
-	}
-*/
-
-
     delay_ms(1000);
     LED_turnOFF_4_LED();
 
-    if ((reception_status!=FM25Q08B_OK)|| (transmission_status!=FM25Q08B_OK)|| (erasion_status!=FM25Q08B_OK))GPIO_set_HIGH(GPIOD, 14);
+	// Если есть ошибки - загорится красный светодиод
+    if ((reception_status != FM25Q08B_OK)
+		|| (transmission_status != FM25Q08B_OK)
+		|| (erasion_status != FM25Q08B_OK))
+	{
+		GPIO_set_HIGH(GPIOD, 14);
+	}
     delay_ms(1000);
 
     /*********************************** Проверка работоспособности модуля I2C1 ***************************************/
@@ -311,7 +325,7 @@ int main()
                 }*/
             }
             GPIO_set_HIGH(GPIOD, 13);   // Загорелся оранжевый - чтение окончено
-            break;
+            break;						// Чтение/запись выполнены, выход из цикла попыток подключиться
         }
         if (I2C_is_Device_Ready(I2C1, EEPROM_ADDRESS) != I2C_OK)		// Не получилось подключиться за 10 попыток => выйти из цикла попыток и перейти к основному циклу
         {
@@ -326,8 +340,6 @@ int main()
     uint32_t start = get_current_ms();       			// Момент отсчета времени для основного цикла
     while (1)
     {
-
-
         if (is_time_passed_ms(start, time_delay))		// Первая половина цикла: светодиоды выключены
         {
 			LED_turnOFF_4_LED();
