@@ -3,79 +3,106 @@
   * @brief   Файл содержит реализации функций AD9833
   */
 
-/** Includes ******************************************************************/
+/** Includes **********************************************************************************************************/
 #include "AD9833.h"
 #include "systick.h"
 #include "gpio.h"
 
-/**
-  * @brief Инициализация GPIO для управления модулем AD9833
-  */
+/** Functions *********************************************************************************************************/
+
+/***************************************** Static functions ***********************************************************/
+
+	/**
+	! Запись 16-битного слова в AD9833.
+	- SPIx - SPI модуль (SPI1, SPI2, SPI3).
+	- data - 16-битные данные для записи.
+	*/
+static void AD9833_Write(SPI_TypeDef* SPIx, uint16_t data)
+{
+    uint8_t spi_data[2];
+
+    // Преобразование 16-битного слова в два байта (старший первый)
+    spi_data[0] = (data >> 8) & 0xFF;
+    spi_data[1] = data & 0xFF;
+
+    // Включение FSY (низкий уровень)
+    AD9833_FSY_PORT->BSRR = (uint32_t)AD9833_FSY_PIN << 16;
+
+    // Отправка данных через SPI
+    SPI_Transmit(SPIx, spi_data, 2);
+
+    // Выключение FSY (высокий уровень)
+    AD9833_FSY_PORT->BSRR = AD9833_FSY_PIN;
+}
+
+	/**
+	! Запись значения в цифровой потенциометр MCP41010.
+	- SPIx - SPI модуль (SPI1, SPI2, SPI3)
+	- value - значение амплитуды (0-255)
+	*/
+static void MCP41010_Write(SPI_TypeDef* SPIx, uint8_t value)
+{
+    uint8_t spi_data[2];
+    uint16_t command = MCP41010_CMD_WRITE | value;	// Значение амплитуды записывается во второй байт данных, в первом остается команда 0x11
+
+    // Преобразование команды в два байта
+    spi_data[0] = (command >> 8) & 0xFF;
+    spi_data[1] = command & 0xFF;
+
+    // Включение CS (низкий уровень)
+    MCP41010_CS_PORT->BSRR = (uint32_t)MCP41010_CS_PIN << 16;
+
+    // Отправка данных через SPI
+    SPI_Transmit(SPIx, spi_data, 2);
+
+    // Выключение CS (высокий уровень)
+    MCP41010_CS_PORT->BSRR = MCP41010_CS_PIN;
+}
+
+/***************************************** Public functions ***********************************************************/
+
+	/**
+	! Включение тактирования порта GPIO, инициализация выводов GPIO для управления генератора сигналов AD9833 и
+		цифровым потенциометром MCP41010.
+		Установка высокого уровня на выводах GPIO.
+	*/
 void AD9833_GPIO_Init(void)
 {
-	// Включение тактирования, инициализация пинов как выход, установка высокого уровня на выходе
 	GPIO_set_HIGH(AD9833_FSY_PORT, AD9833_FSY_PIN);		// PA3 -> FSY
 	GPIO_set_HIGH(MCP41010_CS_PORT, MCP41010_CS_PIN);	// PA4 -> CS
 }
 
-/**
-  ! Запись 16-битного слова в AD9833
-  - SPIx - SPI модуль (SPI1, SPI2, SPI3)
-  - data - 16-битные данные для записи
-  */
-static void AD9833_Write(SPI_TypeDef* SPIx, uint16_t data)
-{
-    uint8_t spi_data[2];
-    // Преобразуем 16-битное слово в два байта (старший первый)
-    spi_data[0] = (data >> 8) & 0xFF;
-    spi_data[1] = data & 0xFF;
-    // Активируем FSY (active low)
-    AD9833_FSY_PORT->BSRR = (uint32_t)AD9833_FSY_PIN << 16;
-    // Отправляем данные через SPI
-    SPI_Transmit(SPIx, spi_data, 2);
-    // Деактивируем FSY
-    AD9833_FSY_PORT->BSRR = AD9833_FSY_PIN;
-}
-
-/**
-  ! Запись значения в цифровой потенциометр MCP41010
-  - SPIx - SPI модуль (SPI1, SPI2, SPI3)
-  - value - значение амплитуды (0-255)
-  */
-static void MCP41010_Write(SPI_TypeDef* SPIx, uint8_t value)
-{
-    uint8_t spi_data[2];
-    uint16_t command = MCP41010_CMD_WRITE | value;
-    // Преобразуем команду в два байта
-    spi_data[0] = (command >> 8) & 0xFF;
-    spi_data[1] = command & 0xFF;
-    // Активируем CS (active low)
-    MCP41010_CS_PORT->BSRR = (uint32_t)MCP41010_CS_PIN << 16;
-    // Отправляем данные через SPI
-    SPI_Transmit(SPIx, spi_data, 2);
-    // Деактивируем CS
-    MCP41010_CS_PORT->BSRR = MCP41010_CS_PIN;
-}
-
-/**
-  * @brief Инициализация модуля AD9833
-  * @param SPIx: SPI модуль (SPI1, SPI2, SPI3)
-  */
-void AD9833_Module_Init(SPI_TypeDef* SPIx)
+	/**
+	! Инициализация модуля AD9833 с заданными параметрами.
+	- SPIx - SPI модуль (SPI1, SPI2, SPI3).
+	- frequency - частота выходного сигнала в Герцах.
+	- amplitude - амплитуда выходного сигнала как часть от максимальной (например 128: 128/256 = 50% от максимальной).
+	- mode - форма выходного сигнала (AD9833_SIN_MODE, AD9833_TRIANGLE_MODE, AD9833_SQUARE_MODE)
+	*/
+void AD9833_Module_Init(SPI_TypeDef* SPIx, uint32_t frequency, uint8_t amplitude, uint16_t mode)
 {
     AD9833_GPIO_Init();
     AD9833_Reset(SPIx);
-    // Конфигурируем AD9833 для нормальной работы
-    AD9833_Write(SPIx, 0x2100); // B28 bit set for double frequency writes
-    // Устанавливаем среднюю амплитуду
-    AD9833_SetAmplitude(SPIx, 128);
+
+    // Настройка частоты выходного сигнала
+    AD9833_Write(SPIx, 0x2100); // Управляющий код 0010 0000 0000 0000 => далее 2 14-битных слова частоты
+	AD9833_SetFrequency(SPIx, frequency);
+
+    // Настройка амплитуды выходного сигнала
+    AD9833_SetAmplitude(SPIx, amplitude);
+
+	// Настройка формы выходного сигнала
+	AD9833_SetOutputMode(SPIx, mode);
+
+	// Включение выходного сигнала
+	AD9833_EnableOutput(SPIx, 1);
 }
 
-/**
-  * @brief Установка частоты выходного сигнала
-  * @param SPIx: SPI модуль (SPI1, SPI2, SPI3)
-  * @param frequency: частота в Герцах
-  */
+	/**
+	! Установка частоты выходного сигнала.
+	- SPIx - SPI модуль (SPI1, SPI2, SPI3).
+	- frequency - частота в Герцах.
+	*/
 void AD9833_SetFrequency(SPI_TypeDef* SPIx, uint32_t frequency)
 {
     uint32_t freq_word;
@@ -86,30 +113,30 @@ void AD9833_SetFrequency(SPI_TypeDef* SPIx, uint32_t frequency)
     AD9833_Write(SPIx, AD9833_FREQ0_REG | ((freq_word >> 14) & 0x3FFF)); // MSB
 }
 
-/**
-  * @brief Установка амплитуды выходного сигнала
-  * @param SPIx: SPI модуль (SPI1, SPI2, SPI3)
-  * @param amplitude: амплитуда (0-255)
-  */
+	/**
+	! Установка амплитуды выходного сигнала.
+	- SPIx - SPI модуль (SPI1, SPI2, SPI3).
+	- amplitude - амплитуда (0-255).
+	*/
 void AD9833_SetAmplitude(SPI_TypeDef* SPIx, uint8_t amplitude)
 {
     MCP41010_Write(SPIx, amplitude);
 }
 
-/**
-  * @brief Установка формы выходного сигнала
-  * @param SPIx: SPI модуль (SPI1, SPI2, SPI3)
-  * @param mode: режим (AD9833_SINE_MODE, AD9833_TRIANGLE_MODE, AD9833_SQUARE_MODE)
-  */
+	/**
+	! Установка формы выходного сигнала.
+	- SPIx - SPI модуль (SPI1, SPI2, SPI3).
+	- mode - режим (AD9833_SIN_MODE, AD9833_TRIANGLE_MODE, AD9833_SQUARE_MODE).
+	*/
 void AD9833_SetOutputMode(SPI_TypeDef* SPIx, uint16_t mode)
 {
     AD9833_Write(SPIx, mode);
 }
 
-/**
-  * @brief Сброс AD9833
-  * @param SPIx: SPI модуль (SPI1, SPI2, SPI3)
-  */
+	/**
+	! Сброс внутренних регистров AD9833. Регистры фазы, частоты и управления НЕ СБРАСЫВАЮТСЯ.
+	- SPIx - SPI модуль (SPI1, SPI2, SPI3).
+	*/
 void AD9833_Reset(SPI_TypeDef* SPIx)
 {
     AD9833_Write(SPIx, AD9833_RESET_CMD);
@@ -117,16 +144,16 @@ void AD9833_Reset(SPI_TypeDef* SPIx)
     AD9833_Write(SPIx, 0x0000); // Снять сброс
 }
 
-/**
-  * @brief Включение/выключение выходного сигнала
-  * @param SPIx: SPI модуль (SPI1, SPI2, SPI3)
-  * @param enable: 1 - включить, 0 - выключить
-  */
+	/**
+	! Включение/выключение выходного сигнала.
+	- SPIx - SPI модуль (SPI1, SPI2, SPI3).
+	- enable - 1 - включить, 0 - выключить.
+	*/
 void AD9833_EnableOutput(SPI_TypeDef* SPIx, uint8_t enable)
 {
     if(enable) {
-        AD9833_Write(SPIx, AD9833_FREQ0_REG); // Включить выход
+        AD9833_Write(SPIx, AD9833_FREQ0_REG);	// Включить выход
     } else {
-        AD9833_Write(SPIx, AD9833_SLEEP1_CMD); // Выключить выход (режим сна)
+        AD9833_Write(SPIx, AD9833_SLEEP1_CMD);	// Выключить выход (режим сна)
     }
 }

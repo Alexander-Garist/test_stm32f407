@@ -43,26 +43,27 @@
 
 /****************** Макросы для управления CS *********************************/
 /********** CS_LOW() начинает операцию, CS_HIGH() заканчивает *****************/
-//Для SPI1
+// Для SPI1
 #define SPI1_CS_LOW()   (SPI1_CS_PORT->BSRR = (1 << (SPI1_CS_PIN + 16)))
 #define SPI1_CS_HIGH()  (SPI1_CS_PORT->BSRR = (1 << SPI1_CS_PIN))
 
-//Для SPI2
+// Для SPI2
 #define SPI2_CS_LOW()   (SPI2_CS_PORT->BSRR = (1 << (SPI2_CS_PIN + 16)))
 #define SPI2_CS_HIGH()  (SPI2_CS_PORT->BSRR = (1 << SPI2_CS_PIN))
 
-//Для SPI3
+// Для SPI3
 #define SPI3_CS_LOW()   (SPI3_CS_PORT->BSRR = (1 << (SPI3_CS_PIN + 16))
 #define SPI3_CS_HIGH()  (SPI3_CS_PORT->BSRR = (1 << SPI3_CS_PIN))
 
 /************* Перечисление статусов выполнения функций SPI *******************/
 typedef enum
 {
-    SPI_OK =                0,  //Функция успешно отработала
-    SPI_DATA_NULL =         1,  //Ошибка массива данных для записи/чтения
-    SPI_FLAG_TIMEOUT =      2,  //Ошибка ожидания установки флага
-    SPI_ERROR_WRITE =       3,  //Ошибка передачи данных
-    SPI_ERROR_READ =        4   //Ошибка приема данных
+    SPI_OK =                0,  // Функция успешно отработала
+    SPI_DATA_NULL =         1,  // Ошибка массива данных для записи/чтения
+    SPI_FLAG_TIMEOUT =      2,  // Ошибка ожидания установки флага
+    SPI_ERROR_WRITE =       3,  // Ошибка передачи данных
+    SPI_ERROR_READ =        4,  // Ошибка приема данных
+	SPI_DEVICE_NOT_READY =	5	// Устройство не готово к работе или отсутствует
 }SPI_Status_t;
 
 /** Functions *****************************************************************/
@@ -72,6 +73,12 @@ typedef enum
 	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
 	*/
 void SPI_Enable_Pin(SPI_TypeDef* SPIx);
+
+	/**
+	! Проверка готовности подключенного устройства.
+	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
+	*/
+SPI_Status_t SPI_is_device_ready(SPI_TypeDef* SPIx);
 
 	/**
 	! Функция отправки данных по шине SPI

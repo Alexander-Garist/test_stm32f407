@@ -13,6 +13,7 @@
 #include "BL24CM1A.h"
 #include "spi.h"
 #include "FM25Q08B.h"
+#include "AD9833.h"
 
 /** Defines ***********************************************************************************************************/
 
@@ -128,14 +129,78 @@ int main()
 
 	/************** Настройка SPI и инициализация портов GPIO в режиме альтернативной функции *************************/
 
-    GPIO_set_HIGH(GPIOB, 12);								//Определение PB12 как OUTPUT
-    GPIO_Enable_SPI(SPI2, SPI2_SCK_PORT, SPI2_SCK_PIN);     //Определение PB13 как SPI2_SCK
-    GPIO_Enable_SPI(SPI2, SPI2_MISO_PORT, SPI2_MISO_PIN);   //Определение PB14 как SPI2_MISO
-    GPIO_Enable_SPI(SPI2, SPI2_MOSI_PORT, SPI2_MOSI_PIN);   //Определение PB15 как SPI2_MOSI
+    GPIO_set_HIGH(GPIOB, 12);								// Определение PB12 как OUTPUT
+    GPIO_Enable_SPI(SPI2, SPI2_SCK_PORT, SPI2_SCK_PIN);     // Определение PB13 как SPI2_SCK
+    GPIO_Enable_SPI(SPI2, SPI2_MISO_PORT, SPI2_MISO_PIN);   // Определение PB14 как SPI2_MISO
+    GPIO_Enable_SPI(SPI2, SPI2_MOSI_PORT, SPI2_MOSI_PIN);   // Определение PB15 как SPI2_MOSI
 
 	// Включение модуля SPI2
     SPI_Enable_Pin(SPI2);
     FM25Q08B_Reset(SPI2);
+
+	/*********************************** Настройка AD9833, инициализация портов ***************************************/
+
+	/** Схема подключения AD9833 к STM32F407:
+		CS	-> PA4
+		FSY -> PA3
+		CLK -> PA5 (SPI1_SCK)
+		DAT -> PA7 (SPI1_MOSI)
+		Vcc -> 3.3 V
+	*/
+	GPIO_Enable_SPI(SPI1, GPIOA, 5);	// Определение PA5 как SPI1_SCK
+	GPIO_Enable_SPI(SPI1, GPIOA, 7);	// Определение PA7 как SPI1_MOSI
+
+	// Включение модуля SPI1
+    SPI_Enable_Pin(SPI1);
+
+	// Желаемые параметры выходного сигнала
+	uint32_t OUT_SIGNAL_FREQUENCY = 10000;		// 10 кГц
+	uint8_t OUT_SIGNAL_AMPLITUDE = 128;			// 128/256 = 50% от максимальной амплитуды
+	uint16_t OUT_SIGNAL_MODE = AD9833_SIN_MODE;	// Синусоида
+
+	/** Инициализация модуля генератора сигналов. Внутри AD9833_Module_Init происходит:
+		* инициализация пинов CS и FSY
+		* сброс и снятие сброса модуля генератора
+		* по SPI генератор получает управляющий код 0010 0000 0000 0000
+			(13 бит определяет что дальше должны быть записаны 2 14-битных слова частоты)
+		* запись 2 слов частоты
+		* установка амплитуды сигнала
+		* установка формы сигнала
+	*/
+	// 10 секунд генерируется сигнал с заданными параметрами, далее вносятся изменения
+	AD9833_Module_Init(SPI1, OUT_SIGNAL_FREQUENCY, OUT_SIGNAL_AMPLITUDE, OUT_SIGNAL_MODE);
+	GPIO_set_HIGH(GPIOD, 12);			// Загорелся зеленый светодиод: генерируется исходный сигнал (синусоида 100 кГц 50% амплитуда)
+	delay_ms(10000);
+	GPIO_set_LOW(GPIOD, 12);
+
+	// Изменение параметров выходного сигнала
+	// Следующие 10 секунд: синусоида с частотой 1 кГц
+	AD9833_SetFrequency(SPI1, 1000);	// Изменение частоты сигнала
+	GPIO_set_HIGH(GPIOD, 13);			// Загорелся оранжевый светодиод: генерируется измененный сигнал (синусоида 1 кГц 50% амплитуда)
+	//delay_ms(10000);
+	GPIO_set_LOW(GPIOD, 13);
+
+	// Следующие 10 секунд: пила с частотой 1 кГц
+	AD9833_SetOutputMode(SPI1, AD9833_TRIANGLE_MODE);		// Изменение формы сигнала
+	GPIO_set_HIGH(GPIOD, 15);								// Загорелся синий светодиод: генерируется измененный сигнал (пила 1 кГц 50% амплитуда)
+	//delay_ms(10000);
+	GPIO_set_LOW(GPIOD, 15);
+
+	// Следующие 10 секунд: пила с частотой 1 кГц и большей амплитудой
+	AD9833_SetAmplitude(SPI1, 192);		// Изменение амплитуды сигнала на 75% от максимума
+	GPIO_set_HIGH(GPIOD, 14);			// Загорелся красный светодиод: генерируется измененный сигнал (пила 1 кГц 75% амплитуда)
+	delay_ms(10000);
+	GPIO_set_LOW(GPIOD, 14);
+
+	// Возврат к исходным параметрам: синусоида 100 кГц 50% амплитуда
+	AD9833_SetFrequency(SPI1, 100000);
+	AD9833_SetAmplitude(SPI1, 128);
+	AD9833_SetOutputMode(SPI1, AD9833_SIN_MODE);
+
+	// Моргнуть всеми 4 светодиодами
+	LED_turnON_4_LED();
+	delay_ms(500);
+	LED_turnOFF_4_LED();
 
 	/*********************************** Проверка работоспособности модуля SPI2 ***************************************/
 
@@ -155,7 +220,6 @@ int main()
     uint16_t manufacturer_device_ID = FM25Q08B_Read_Manufacturer_ID(SPI2);
     printf("Manufacturer/Device ID: %04X\n", manufacturer_device_ID);
 */
-
     //uint8_t transmitted_data[FLASH_PAGE_SIZE];
     uint8_t received_data[FLASH_PAGE_SIZE];
 
