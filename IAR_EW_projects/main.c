@@ -129,6 +129,10 @@ int main()
 
 	/************** Настройка SPI и инициализация портов GPIO в режиме альтернативной функции *************************/
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 72f013d120436f01e73dbc223b1c055002982fc7
     GPIO_set_HIGH(GPIOB, 12);								// Определение PB12 как OUTPUT
     GPIO_Enable_SPI(SPI2, SPI2_SCK_PORT, SPI2_SCK_PIN);     // Определение PB13 как SPI2_SCK
     GPIO_Enable_SPI(SPI2, SPI2_MISO_PORT, SPI2_MISO_PIN);   // Определение PB14 как SPI2_MISO
@@ -220,7 +224,10 @@ int main()
     uint16_t manufacturer_device_ID = FM25Q08B_Read_Manufacturer_ID(SPI2);
     printf("Manufacturer/Device ID: %04X\n", manufacturer_device_ID);
 */
+<<<<<<< HEAD
 
+=======
+>>>>>>> 72f013d120436f01e73dbc223b1c055002982fc7
     //uint8_t transmitted_data[FLASH_PAGE_SIZE];
     uint8_t received_data[FLASH_PAGE_SIZE];
 
@@ -408,6 +415,10 @@ int main()
         {
 			LED_turnOFF_4_LED();
         }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 72f013d120436f01e73dbc223b1c055002982fc7
         if (is_time_passed_ms(start, time_delay * 2))	// Вторая половина цикла: светодиоды включаются в соответствии с выбранным режимом
         {
 			switch (blink_mode)
