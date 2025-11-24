@@ -8,10 +8,9 @@
 #include "FM25Q08B.h"
 #include "systick.h"
 
-	/**
-	! Статическая функция ожидания завершения операции, т.е. пока бит WIP не станет 0.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	*/
+/** Functions *********************************************************************************************************/
+
+// Ожидание завершения операции
 static void FM25Q08B_Wait_End_Operation(SPI_TypeDef* SPIx)
 {
     uint8_t STATUS_REGISTER_1 = FM25Q08B_Read_Status_Register_1(SPIx);
@@ -23,10 +22,7 @@ static void FM25Q08B_Wait_End_Operation(SPI_TypeDef* SPIx)
 
 /********************************** Пользовательские функции для flash памяти *****************************************/
 
-	/**
-	! Программный сброс flash памяти.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	*/
+// Программный сброс flash памяти
 void FM25Q08B_Reset(SPI_TypeDef* SPIx)
 {
     uint8_t transmitted_data[2] = {FLASH_CMD_ENABLE_RESET, FLASH_CMD_RESET};				// Отправляемые данные: 2 встроенные команды
@@ -38,11 +34,7 @@ void FM25Q08B_Reset(SPI_TypeDef* SPIx)
 
 /**************************** Считывание идентификаторов модуля FM25Q08B **********************************************/
 
-	/**
-	! Считать Unique_ID чипа памяти.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	- Unique_ID - указатель на массив, в который запишется Unique_ID модуля памяти.
-	*/
+// Считать Unique_ID чипа памяти
 void FM25Q08B_Read_Unique_ID(SPI_TypeDef* SPIx, uint8_t* Unique_ID)
 {
     uint8_t transmitted_data[5] = { FLASH_CMD_READ_UNIQUE_ID, 0x11, 0x22, 0x66, 0x88 };     // Отправляемые данные: встроенная команда + 4 байта мусора ( п. 11.33 стр 51)
@@ -52,11 +44,7 @@ void FM25Q08B_Read_Unique_ID(SPI_TypeDef* SPIx, uint8_t* Unique_ID)
     SPI2_CS_HIGH();																			// CS_HIGH() заканчивает операцию
 }
 
-	/**
-	! Считать JEDEC_ID чипа памяти.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	return: JEDEC_ID.
-	*/
+// Считать JEDEC_ID чипа памяти
 uint32_t FM25Q08B_Read_JEDEC_ID(SPI_TypeDef* SPIx)
 {
     uint8_t transmitted_data = FLASH_CMD_READ_JEDEC_ID;									// Отправляемые данные: встроенная команда ( п. 11.34 стр 52)
@@ -70,11 +58,7 @@ uint32_t FM25Q08B_Read_JEDEC_ID(SPI_TypeDef* SPIx)
     return ((received_data[0] << 16)|(received_data[1] << 8)|received_data[2]);
 }
 
-	/**
-	! Считать Manufacturer_ID чипа памяти.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	return: Manufacturer_ID.
-	*/
+//  Считать Manufacturer ID / Device ID чипа памяти
 uint16_t FM25Q08B_Read_Manufacturer_ID(SPI_TypeDef* SPIx)
 {
     uint8_t transmitted_data[4] = { FLASH_CMD_READ_MANUF_DEVICE_ID, 0x00, 0x00, 0x00 }; // Отправляемые данные: встроенная команда + 24-битный адрес 000000h( п. 11.30 стр 48)
@@ -90,11 +74,7 @@ uint16_t FM25Q08B_Read_Manufacturer_ID(SPI_TypeDef* SPIx)
 
 /************************** Считать STATUS REGISTER 1 и STATUS REGISTER 2 модуля FM25Q08B *****************************/
 
-	/**
-	! Считать STATUS REGISTER 1 (S7-S0).
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	return: STATUS REGISTER 1.
-	*/
+// Считать STATUS REGISTER 1 (S7-S0)
 uint8_t FM25Q08B_Read_Status_Register_1(SPI_TypeDef* SPIx)
 {
     uint8_t transmitted_data = FLASH_CMD_READ_STATUS_REG_1;					// Отправляемые данные: встроенная команда
@@ -107,11 +87,7 @@ uint8_t FM25Q08B_Read_Status_Register_1(SPI_TypeDef* SPIx)
     return STATUS_REGISTER_1;
 }
 
-	/**
-	! Считать STATUS REGISTER 2 (S15-S8).
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	return: STATUS REGISTER 2.
-	*/
+// Считать STATUS REGISTER 2 (S15-S8)
 uint8_t FM25Q08B_Read_Status_Register_2(SPI_TypeDef* SPIx)
 {
     uint8_t transmitted_data = FLASH_CMD_READ_STATUS_REG_2;					// Отправляемые данные: встроенная команда
@@ -124,14 +100,9 @@ uint8_t FM25Q08B_Read_Status_Register_2(SPI_TypeDef* SPIx)
     return STATUS_REGISTER_2;
 }
 
-//===Разрешить/запретить запись в память чипа===============================================================================================================================
+/******************************* Разрешить/запретить запись в память чипа *********************************************/
 
-	/**
-	! Функция FM25Q08B_Write_Enable разрешает запись в память, нужно вызывать перед каждой операцией записи в память
-		или очистки памяти.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	return: статус выполнения команды.
-	*/
+// Разрешение записи в память
 FM25Q08B_Status_t FM25Q08B_Write_Enable(SPI_TypeDef* SPIx)
 {
     uint8_t transmitted_data = FLASH_CMD_WRITE_ENABLE;										// Отправляемые данные: встроенная команда
@@ -143,11 +114,7 @@ FM25Q08B_Status_t FM25Q08B_Write_Enable(SPI_TypeDef* SPIx)
     return FM25Q08B_OK;
 }
 
-	/**
-	! Функция FM25Q08B_Write_Disable запрещает запись в память.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	return: статус выполнения команды.
-	*/
+// Запрет записи в память
 FM25Q08B_Status_t FM25Q08B_Write_Disable(SPI_TypeDef* SPIx)
 {
     uint8_t transmitted_data = FLASH_CMD_WRITE_DISABLE;										// Отправляемые данные: встроенная команда
@@ -161,12 +128,7 @@ FM25Q08B_Status_t FM25Q08B_Write_Disable(SPI_TypeDef* SPIx)
 
 /**************************************** Функции стирания памяти *****************************************************/
 
-	/**
-	! Функция FM25Q08B_Sector_Erase_4KB очищает сектор памяти 4KB.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	- memory_addr - начальный адрес сектора.
-	return: статус выполнения команды.
-	*/
+// Стереть сектор 4 KB
 FM25Q08B_Status_t FM25Q08B_Sector_Erase_4KB(SPI_TypeDef* SPIx, uint32_t memory_addr)
 {
 	// Перед любой операцией очистки памяти вызывается инструкция Write_Enable
@@ -188,13 +150,8 @@ FM25Q08B_Status_t FM25Q08B_Sector_Erase_4KB(SPI_TypeDef* SPIx, uint32_t memory_a
     return FM25Q08B_OK;
 }
 
-	/**
-	! Функция FM25Q08B_Block_Erase_32KB очищает сектор памяти 32KB.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	- memory_addr - начальный адрес блока.
-	return: статус выполнения команды.
-	*/
-FM25Q08B_Status_t FM25Q08B_Block_Erase_32KB(SPI_TypeDef* SPIx, uint32_t memory_addr)         //Очистить блок памяти 32KB, memory_addr - начальный адрес блока
+// Стереть блок 32 KB
+FM25Q08B_Status_t FM25Q08B_Block_Erase_32KB(SPI_TypeDef* SPIx, uint32_t memory_addr)
 {
 	// Перед любой операцией очистки памяти вызывается инструкция Write_Enable
     if (FM25Q08B_Write_Enable(SPIx) != FM25Q08B_OK) return FM25Q08B_ERROR_ERASE;
@@ -215,12 +172,7 @@ FM25Q08B_Status_t FM25Q08B_Block_Erase_32KB(SPI_TypeDef* SPIx, uint32_t memory_a
     return FM25Q08B_OK;
 }
 
-	/**
-	! Функция FM25Q08B_Block_Erase_64KB очищает сектор памяти 64KB.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	- memory_addr - начальный адрес блока.
-	return: статус выполнения команды.
-	*/
+// Стереть блок 64 KB
 FM25Q08B_Status_t FM25Q08B_Block_Erase_64KB(SPI_TypeDef* SPIx, uint32_t memory_addr)
 {
 	// Перед любой операцией очистки памяти вызывается инструкция Write_Enable
@@ -242,15 +194,7 @@ FM25Q08B_Status_t FM25Q08B_Block_Erase_64KB(SPI_TypeDef* SPIx, uint32_t memory_a
     return FM25Q08B_OK;
 }
 
-	/**
-	! Функция FM25Q08B_Chip_Erase очищает всю память чипа 1024KB.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	return: статус выполнения команды.
-	*/	/**
-	! Функция FM25Q08B_Chip_Erase очищает всю память чипа 1024KB.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	return: статус выполнения команды.
-	*/
+// Стереть всю память чипа
 FM25Q08B_Status_t FM25Q08B_Chip_Erase(SPI_TypeDef* SPIx)
 {
 	// Перед любой операцией очистки памяти вызывается инструкция Write_Enable
@@ -268,14 +212,7 @@ FM25Q08B_Status_t FM25Q08B_Chip_Erase(SPI_TypeDef* SPIx)
 
 /*********************************************** Чтение/запись ********************************************************/
 
-	/**
-	! Чтение из памяти FM25Q08B по указанному адресу
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3).
-	- memory_addr - адрес в памяти FM25Q08B, начиная с которого нужно считать данные.
-	- data - указатель на массив, в который данные считываются из FM25Q08B.
-	- size - количество считанных байт данных.
-	return: статус выполнения чтения из FM25Q08B.
-	*/
+// Чтение из памяти FM25Q08B по указанному адресу
 FM25Q08B_Status_t FM25Q08B_Read(SPI_TypeDef* SPIx, uint32_t memory_addr, uint8_t* data, uint32_t size)
 {
     if (data == NULL) return FM25Q08B_ERROR_READ;
@@ -296,16 +233,8 @@ FM25Q08B_Status_t FM25Q08B_Read(SPI_TypeDef* SPIx, uint32_t memory_addr, uint8_t
     return FM25Q08B_OK;
 }
 
-
-	/**
-	! Статическая функция записи в память FM25Q08B по указанному адресу 1 страницы данных (не более 256 байт)
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	- memory_addr - адрес в памяти FM25Q08B, начиная с которого нужно записать данные.
-	- data - указатель на массив, данные из которого записываются в FM25Q08B.
-	- size - количество записанных байт данных.
-	return: статус выполнения записи в FM25Q08B.
-	*/
-static FM25Q08B_Status_t FM25Q08B_Write_Page(SPI_TypeDef* SPIx, uint32_t memory_addr, uint8_t* data, uint32_t size) //Запись одной страницы в память FM25Q08B по указанному адресу
+// Запись в память FM25Q08B по указанному адресу (1 страница максимум)
+static FM25Q08B_Status_t FM25Q08B_Write_Page(SPI_TypeDef* SPIx, uint32_t memory_addr, uint8_t* data, uint32_t size)
 {
     if (size > FLASH_PAGE_SIZE) return FM25Q08B_ERROR_WRITE_PAGE;	// Функция позволяет записать не более 1 страницы данных
     FM25Q08B_Write_Enable(SPIx);									// Перед любой операцией записи вызывается инструкция Write_Enable
@@ -331,14 +260,7 @@ static FM25Q08B_Status_t FM25Q08B_Write_Page(SPI_TypeDef* SPIx, uint32_t memory_
     return FM25Q08B_OK;
 }
 
-	/**
-	! Запись в память FM25Q08B по указанному адресу
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	- memory_addr - адрес в памяти FM25Q08B, начиная с которого нужно записать данные.
-	- data - указатель на массив, данные из которого записываются в FM25Q08B.
-	- size - количество записанных байт данных.
-	return: статус выполнения записи в FM25Q08B.
-	*/
+// Запись в память FM25Q08B по указанному адресу
 FM25Q08B_Status_t FM25Q08B_Write(SPI_TypeDef* SPIx, uint32_t memory_addr, uint8_t* data, uint32_t size)
 {
     FM25Q08B_Status_t status;		// Возвращаемый статус выполнения функции

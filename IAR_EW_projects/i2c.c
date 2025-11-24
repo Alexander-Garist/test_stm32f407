@@ -3,17 +3,14 @@
   * @brief   Файл содержит реализации функций I2C
   */
 
-/* Includes ------------------------------------------------------------------*/
+/** Includes **********************************************************************************************************/
 #include <stdio.h>
 #include "i2c.h"
 #include "systick.h"
 
-/********************** Статические функции ***********************************/
+/***************************************** Статические функции ********************************************************/
 
-	/**
-	! Включение тактирования модуля I2Cx
-	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	*/
+// Включение тактирования модуля I2C
 static void I2C_RCC_Enable(I2C_TypeDef* I2Cx)
 {
     uint32_t Address_Shift = (uint32_t)I2Cx - (uint32_t)I2C1;   // Расчет сдвига порта от I2C1_BASE
@@ -28,10 +25,7 @@ static void I2C_RCC_Enable(I2C_TypeDef* I2Cx)
     RCC->APB1ENR |= RCC_Enable_Mask[Address_Shift];		// Включение только нужного порта
 }
 
-	/**
-	! Инициализация выбранного модуля I2C, настройка регистров I2C
-	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	*/
+// Инициализация модуля I2C
 static void I2C_Init_Pin(I2C_TypeDef* I2Cx)
 {
     I2Cx->CR1 &= ~I2C_CR1_PE;       // Сброс флага PE для настройки I2C
@@ -47,16 +41,9 @@ static void I2C_Init_Pin(I2C_TypeDef* I2Cx)
     delay_ms(10);
 }
 
-/*********** Функции ожидания установки флага и освобождения шины *************/
+/**************************** Функции ожидания установки флага и освобождения шины ************************************/
 
-	/**
-	! Функция ожидания установки флага состояния SR1
-	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- I2C_flag - маска флага, который должен установиться
-	- I2C_timeout - максимальное время ожидания установки флага
-	return: статус выполнения установки флага (если успешно установился в
-		пределах времени I2C_timeout, то I2C_OK)
-	*/
+// Ожидание установки флага состояния SR1
 static I2C_Status_t I2C_Wait_Flag_SR1(I2C_TypeDef* I2Cx, uint16_t I2C_flag, uint32_t I2C_timeout)
 {
     uint32_t start_time = get_current_ms();
@@ -67,13 +54,7 @@ static I2C_Status_t I2C_Wait_Flag_SR1(I2C_TypeDef* I2Cx, uint16_t I2C_flag, uint
     return I2C_OK;
 }
 
-	/**
-	! Функция ожидания освобождения шины I2C
-	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- I2C_timeout - максимальное время ожидания освобождения шины I2C
-	return: статус выполнения освобождения шины (если успешно освободилась в
-		пределах времени I2C_timeout, то I2C_OK)
-	*/
+// Ожидание освобождения шины I2C
 static I2C_Status_t I2C_Wait_Bus_Busy(I2C_TypeDef* I2Cx, uint32_t I2C_timeout)
 {
     uint32_t start_time = get_current_ms();
@@ -84,16 +65,9 @@ static I2C_Status_t I2C_Wait_Bus_Busy(I2C_TypeDef* I2Cx, uint32_t I2C_timeout)
     return I2C_OK;
 }
 
-/**************** Генерация START и STOP состояний ****************************/
+/*********************************** Генерация START и STOP состояний *************************************************/
 
-	/**
-	! Начало передачи по I2C, генерация состояния START
-	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	- I2C_address - 7-битный адрес устройства, подключенного к шине I2C
-	- I2C_direction - выбор чтение или запись по I2C:
-		0 - запрос на запись, 1 - запрос на чтение
-	return: статус выполнения генерации состояния START
-	*/
+// Генерация состояния START
 static I2C_Status_t I2C_Start(I2C_TypeDef* I2Cx, uint8_t I2C_address, uint8_t I2C_direction)
 {
     //Генерация START
@@ -108,35 +82,22 @@ static I2C_Status_t I2C_Start(I2C_TypeDef* I2Cx, uint8_t I2C_address, uint8_t I2
     return I2C_OK;
 }
 
-	/**
-	! Окончание передачи по I2C, генерация состояния STOP
-	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
-	*/
+// Генерация состояния STOP
 static void I2C_Stop(I2C_TypeDef* I2Cx)
 {
     I2Cx->CR1 |= I2C_CR1_STOP;
 }
 
-/*********************** Глобальные функции ***********************************/
+/******************************************** Глобальные функции ******************************************************/
 
-	/**
-	! Функция I2C_Enable_Pin разрешает использовать выбранный модуль I2C.
-		Функция вызывается после настройки GPIO.
-	- I2Cx - выбранный модуль I2C
-	*/
+// Включение модуля I2C
 void I2C_Enable_Pin(I2C_TypeDef* I2Cx)
 {
     I2C_RCC_Enable(I2Cx);   //Включение тактирования I2C
     I2C_Init_Pin(I2Cx);     //Сброс перед работой, настройка частоты
 }
 
-	/**
-	! Функция I2C_is_Device_Ready определяет, готово ли устройство, подключенное
-		к шине I2C, к работе.
-	- I2Cx - выбранный модуль I2C
-	- I2C_device_addr - адрес подключенного по I2C устройства
-	return: статус готовности
-	*/
+// Проверка готовности подключенного устройства
 I2C_Status_t I2C_is_Device_Ready(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr)
 {
     I2C_Status_t status = I2C_OK;
@@ -145,11 +106,7 @@ I2C_Status_t I2C_is_Device_Ready(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr)
     return status;
 }
 
-	/**
-	! Функция I2C_Status_Report выводит статус выполнения функции I2C для
-		отладки
-	- I2C_Function_Status - статус выполнения
-	*/
+// Вывод статуса выполенения функций I2C для отладки
 void I2C_Status_Report(I2C_Status_t I2C_Function_Status)
 {
     switch (I2C_Function_Status)
@@ -165,16 +122,9 @@ void I2C_Status_Report(I2C_Status_t I2C_Function_Status)
     }
 }
 
-/********************** Функции чтения/записи I2C *****************************/
+/*************************************** Функции чтения/записи I2C ****************************************************/
 
-	/**
-	! Функция I2C_Write отправляет по шине I2C данные
-	- I2Cx - выбранный модуль I2C
-	- I2C_device_addr - адрес подключенного по I2C устройства
-	- I2C_data - данные для отправки
-	- I2C_size - объем данных для отправки
-	return: статус выполнения
-	*/
+// Отправка данных по шине I2C
 I2C_Status_t I2C_Write(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr, uint8_t* I2C_data, uint16_t I2C_size)
 {
 	//Ожидание освобождения шины I2C, шина освобождается после генерации состояния STOP на шине
@@ -200,14 +150,7 @@ I2C_Status_t I2C_Write(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr, uint8_t* I2C_
     return I2C_OK;
 }
 
-	/**
-	! Функция I2C_Read принимает по шине I2C данные
-	- I2Cx - выбранный модуль I2C
-	- I2C_device_addr - адрес подключенного по I2C устройства
-	- I2C_data - принятые данные
-	- I2C_size - объем принятых данных
-	return: статус выполнения
-	*/
+// Прием данных по шине I2C
 I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr, uint8_t* I2C_data, uint16_t I2C_size)
 {
     if (I2C_data == NULL) return I2C_DATA_NULL;
