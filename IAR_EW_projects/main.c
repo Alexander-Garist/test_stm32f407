@@ -129,15 +129,23 @@ int main()
 
 	/************** Настройка SPI и инициализация портов GPIO в режиме альтернативной функции *************************/
 
+<<<<<<< HEAD
     GPIO_set_HIGH(GPIOB, 12);								// Определение PB12 как OUTPUT
     GPIO_Enable_SPI(SPI2, SPI2_SCK_PORT, SPI2_SCK_PIN);     // Определение PB13 как SPI2_SCK
     GPIO_Enable_SPI(SPI2, SPI2_MISO_PORT, SPI2_MISO_PIN);   // Определение PB14 как SPI2_MISO
     GPIO_Enable_SPI(SPI2, SPI2_MOSI_PORT, SPI2_MOSI_PIN);   // Определение PB15 как SPI2_MOSI
+=======
+    GPIO_set_HIGH(GPIOB, 12);								//Определение PB12 как OUTPUT
+    GPIO_Enable_SPI(SPI2, SPI2_SCK_PORT, SPI2_SCK_PIN);     //Определение PB13 как SPI2_SCK
+    GPIO_Enable_SPI(SPI2, SPI2_MISO_PORT, SPI2_MISO_PIN);   //Определение PB14 как SPI2_MISO
+    GPIO_Enable_SPI(SPI2, SPI2_MOSI_PORT, SPI2_MOSI_PIN);   //Определение PB15 как SPI2_MOSI
+>>>>>>> d6d2b3954ebc6dbc66f481c49ed34cc0c593a264
 
 	// Включение модуля SPI2
     SPI_Enable_Pin(SPI2);
     FM25Q08B_Reset(SPI2);
 
+<<<<<<< HEAD
 	/*********************************** Настройка AD9833, инициализация портов ***************************************/
 
 	/** Схема подключения AD9833 к STM32F407:
@@ -202,6 +210,8 @@ int main()
 	delay_ms(500);
 	LED_turnOFF_4_LED();
 
+=======
+>>>>>>> d6d2b3954ebc6dbc66f481c49ed34cc0c593a264
 	/*********************************** Проверка работоспособности модуля SPI2 ***************************************/
 
     uint8_t unique_id[8];
@@ -220,10 +230,19 @@ int main()
     uint16_t manufacturer_device_ID = FM25Q08B_Read_Manufacturer_ID(SPI2);
     printf("Manufacturer/Device ID: %04X\n", manufacturer_device_ID);
 */
+<<<<<<< HEAD
     //uint8_t transmitted_data[FLASH_PAGE_SIZE];
     uint8_t received_data[FLASH_PAGE_SIZE];
 
     for (uint16_t i = 0; i < FLASH_PAGE_SIZE; i++)
+=======
+    
+    //uint8_t transmitted_data[FLASH_PAGE_SIZE];
+    uint8_t received_data[FLASH_PAGE_SIZE];
+
+
+    for (uint16_t i = 0; i < FLASH_SECTOR_SIZE; i++)
+>>>>>>> d6d2b3954ebc6dbc66f481c49ed34cc0c593a264
     {
         received_data[i] = 55;  // Изначально в received_data мусор
     }
@@ -267,6 +286,10 @@ int main()
     /************************************* Проверка записи и чтения ***************************************************/
 
 	//printf("Проверка записи\n");
+<<<<<<< HEAD
+=======
+
+>>>>>>> d6d2b3954ebc6dbc66f481c49ed34cc0c593a264
 	uint8_t transmitted_data_test[FLASH_PAGE_SIZE];
 	uint8_t received_data_test[FLASH_PAGE_SIZE];
 
@@ -406,6 +429,10 @@ int main()
         {
 			LED_turnOFF_4_LED();
         }
+<<<<<<< HEAD
+=======
+
+>>>>>>> d6d2b3954ebc6dbc66f481c49ed34cc0c593a264
         if (is_time_passed_ms(start, time_delay * 2))	// Вторая половина цикла: светодиоды включаются в соответствии с выбранным режимом
         {
 			switch (blink_mode)
