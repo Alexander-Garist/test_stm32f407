@@ -220,6 +220,7 @@ int main()
     uint16_t manufacturer_device_ID = FM25Q08B_Read_Manufacturer_ID(SPI2);
     printf("Manufacturer/Device ID: %04X\n", manufacturer_device_ID);
 */
+
     //uint8_t transmitted_data[FLASH_PAGE_SIZE];
     uint8_t received_data[FLASH_PAGE_SIZE];
 
@@ -267,6 +268,7 @@ int main()
     /************************************* Проверка записи и чтения ***************************************************/
 
 	//printf("Проверка записи\n");
+
 	uint8_t transmitted_data_test[FLASH_PAGE_SIZE];
 	uint8_t received_data_test[FLASH_PAGE_SIZE];
 
