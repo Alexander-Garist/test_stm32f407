@@ -26,13 +26,13 @@ static void AD9833_Write(SPI_TypeDef* SPIx, uint16_t data)
     spi_data[1] = data & 0xFF;
 
     // Включение FSY (низкий уровень)
-    AD9833_FSY_PORT->BSRR = (uint32_t)AD9833_FSY_PIN << 16;
+    GPIO_set_LOW(AD9833_FSY_PORT, AD9833_FSY_PIN);
 
     // Отправка данных через SPI
     SPI_Transmit(SPIx, spi_data, 2);
 
     // Выключение FSY (высокий уровень)
-    AD9833_FSY_PORT->BSRR = AD9833_FSY_PIN;
+    GPIO_set_HIGH(AD9833_FSY_PORT, AD9833_FSY_PIN);
 }
 
 	/**
@@ -50,13 +50,13 @@ static void MCP41010_Write(SPI_TypeDef* SPIx, uint8_t value)
     spi_data[1] = command & 0xFF;
 
     // Включение CS (низкий уровень)
-    MCP41010_CS_PORT->BSRR = (uint32_t)MCP41010_CS_PIN << 16;
+    GPIO_set_LOW(MCP41010_CS_PORT, MCP41010_CS_PIN);
 
     // Отправка данных через SPI
     SPI_Transmit(SPIx, spi_data, 2);
 
     // Выключение CS (высокий уровень)
-    MCP41010_CS_PORT->BSRR = MCP41010_CS_PIN;
+    GPIO_set_HIGH(MCP41010_CS_PORT, MCP41010_CS_PIN);
 }
 
 /***************************************** Public functions ***********************************************************/
@@ -85,7 +85,7 @@ void AD9833_Module_Init(SPI_TypeDef* SPIx, uint32_t frequency, uint8_t amplitude
     AD9833_Reset(SPIx);
 
     // Настройка частоты выходного сигнала
-    AD9833_Write(SPIx, 0x2100); // Управляющий код 0010 0000 0000 0000 => далее 2 14-битных слова частоты
+    //AD9833_Write(SPIx, 0x2000); // Управляющий код 0010 0000 0000 0000 => далее 2 14-битных слова частоты
 	AD9833_SetFrequency(SPIx, frequency);
 
     // Настройка амплитуды выходного сигнала
@@ -108,9 +108,11 @@ void AD9833_SetFrequency(SPI_TypeDef* SPIx, uint32_t frequency)
     uint32_t freq_word;
     // Расчет значения частоты: FREQ = (f * 2^28) / MCLK
     freq_word = (uint32_t)((frequency * 268435456.0) / MCLK_FREQUENCY);
+
+	AD9833_Write(SPIx, 0x2000); // Управляющий код 0010 0000 0000 0000 => далее 2 14-битных слова частоты
     // Запись в регистр частоты FREQ0 (14-битные фрагменты)
     AD9833_Write(SPIx, AD9833_FREQ0_REG | (freq_word & 0x3FFF));         // LSB
-    AD9833_Write(SPIx, AD9833_FREQ0_REG | ((freq_word >> 14) & 0x3FFF)); // MSB
+	AD9833_Write(SPIx, AD9833_FREQ0_REG | ((freq_word >> 14) & 0x3FFF)); // MSB
 }
 
 	/**
@@ -142,6 +144,7 @@ void AD9833_Reset(SPI_TypeDef* SPIx)
     AD9833_Write(SPIx, AD9833_RESET_CMD);
     delay_ms(10);
     AD9833_Write(SPIx, 0x0000); // Снять сброс
+	delay_ms(10);
 }
 
 	/**

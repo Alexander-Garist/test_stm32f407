@@ -14,12 +14,12 @@
 /** Defines ***********************************************************************************************************/
 
 // Информация о модуле памяти
-#define FLASH_START_ADDRESS     0x000000    //начальный адрес памяти FM25Q08B
-#define FLASH_PAGE_SIZE         256         //максимальный объем данных, которые можно записать в память за 1 операцию (1 страница)
-#define FLASH_SECTOR_SIZE       4096        //Размер сектора 4KB = 4096 байт
-#define FLASH_BLOCK_32KB_SIZE   32768       //Размер блока 32KB = 32768 байт
-#define FLASH_BLOCK_64KB_SIZE   65536       //Размер блока 64KB = 65536 байт
-#define FLASH_ALL_SIZE          1048576     //Размер всей памяти 1024KB = 1048576 байт
+#define FLASH_START_ADDRESS     0x000000    // Начальный адрес памяти FM25Q08B
+#define FLASH_PAGE_SIZE         256         // Размер страницы 256 байт
+#define FLASH_SECTOR_SIZE       4096        // Размер сектора 4KB = 4096 байт
+#define FLASH_BLOCK_32KB_SIZE   32768       // Размер блока 32KB = 32768 байт
+#define FLASH_BLOCK_64KB_SIZE   65536       // Размер блока 64KB = 65536 байт
+#define FLASH_ALL_SIZE          1048576     // Размер всей памяти 1024KB = 1048576 байт
 
 /** Встроенные команды FM25Q08B ***************************************************************************************/
 
@@ -32,7 +32,7 @@
 #define FLASH_CMD_READ_STATUS_REG_2     0x35
 
 // Запись в статусные регистры
-#define FLASH_CMD_WRITE_STATUS_REG      0x01
+#define FLASH_CMD_WRITE_STATUS_REG      0x01	// Соответствующей функции пока нет
 
 // Команды стирания памяти
 #define FLASH_CMD_SECTOR_ERASE_4KB      0x20
@@ -41,8 +41,8 @@
 #define FLASH_CMD_CHIP_ERASE            0xC7
 
 // Включение/выключение энергосберегающего режима
-#define FLASH_CMD_POWER_DOWN            0xB9
-#define FLASH_CMD_RELEASE_POWER_DOWN    0xAB
+#define FLASH_CMD_POWER_DOWN            0xB9	// Соответствующей функции пока нет
+#define FLASH_CMD_RELEASE_POWER_DOWN    0xAB	// Соответствующей функции пока нет
 
 // Команды чтения/записи
 #define FLASH_CMD_READ_DATA             0x03
@@ -176,12 +176,6 @@ FM25Q08B_Status_t FM25Q08B_Block_Erase_64KB(
 	return: статус выполнения команды.
 	*/
 FM25Q08B_Status_t FM25Q08B_Chip_Erase(SPI_TypeDef* SPIx);
-
-/*********************************** to do ************************************/
-// дописать функции
-// FLASH_CMD_WRITE_STATUS_REG
-// FLASH_CMD_POWER_DOWN
-// FLASH_CMD_RELEASE_POWER_DOWN
 
 /*************************************** Функции чтения/записи FM25Q08B ***********************************************/
 	/**

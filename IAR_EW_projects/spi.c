@@ -3,21 +3,13 @@
   * @brief   Файл содержит реализации функций SPI
   */
 
-/** Includes ******************************************************************/
+/** Includes **********************************************************************************************************/
 #include "spi.h"
 #include "systick.h"
 
-/** Static Functions **********************************************************/
+/** Static Functions **************************************************************************************************/
 
-	/**
-	! Статическая функция SPI_Wait_Set_Flag_SR реализует ожидание установки
-		флага состояния SR с заданным пределом времени ожидания.
-	- SPIx - выбранный модуль SPI (SPI1, SPI2, SPI3)
-	- SPI_flag - маска флага, который должен установиться
-	- SPI_timeout - максимальное время ожидания установки флага
-	return: статус выполнения установки флага (если успешно установился в
-		пределах времени SPI_timeout, то SPI_OK)
-	*/
+// Ожидание установки флага состояния SR
 static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag, uint32_t SPI_timeout)
 {
     uint32_t start_time = get_current_ms();
@@ -28,15 +20,7 @@ static SPI_Status_t SPI_Wait_Set_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag, u
     return SPI_OK;
 }
 
-	/**
-	! Статическая функция SPI_Wait_Set_Flag_SR реализует ожидание сброса
-		флага состояния SR с заданным пределом времени ожидания.
-	- SPIx - выбранный модуль SPI (SPI1, SPI2, SPI3)
-	- SPI_flag - маска флага, который должен сброситься
-	- SPI_timeout - максимальное время ожидания сброса флага
-	return: статус выполнения сброса флага (если успешно сброшен в
-		пределах времени SPI_timeout, то SPI_OK)
-	*/
+// Ожидание сброса флага состояния SR
 static SPI_Status_t SPI_Wait_Clear_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag, uint32_t SPI_timeout)
 {
     uint32_t start_time = get_current_ms();
@@ -47,11 +31,7 @@ static SPI_Status_t SPI_Wait_Clear_Flag_SR(SPI_TypeDef* SPIx, uint16_t SPI_flag,
     return SPI_OK;
 }
 
-	/**
-	! Статическая функция SPI_RCC_Enable включает тактирование выбранного
-		модуля SPI.
-	- SPIx - выбранный модуль SPI (SPI1, SPI2, SPI3)
-	*/
+// Включение тактирования модуля SPI
 static void SPI_RCC_Enable(SPI_TypeDef* SPIx)
 {
     if (SPIx == SPI1) RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
@@ -59,10 +39,7 @@ static void SPI_RCC_Enable(SPI_TypeDef* SPIx)
     if (SPIx == SPI3) RCC->APB1ENR |= RCC_APB1ENR_SPI3EN;
 }
 
-	/**
-	! Инициализация выбранного модуля SPI, настройка регистров SPI.
-	- SPIx - выбранный модуль SPI (SPI1, SPI2, SPI3)
-	*/
+// Инициализация модуля SPI (Mode 0: CPOL 0; CPHA 0)
 static void SPI_Init(SPI_TypeDef* SPIx)
 {
     SPIx->CR1 = 0;      // Сброс всех битов CR1 в состояние RESET, т.е. все нули
@@ -81,36 +58,33 @@ static void SPI_Init(SPI_TypeDef* SPIx)
     SPIx->CR1 |= SPI_CR1_SPE;
 }
 
-/** Functions *****************************************************************/
+// Инициализация модуля SPI (Mode 2: CPOL 1; CPHA 0)
+void SPI_Init_Mode_2(SPI_TypeDef* SPIx)
+{
+	// Включение тактирования
+	SPI_RCC_Enable(SPIx);
 
-	/**
-	! Включение выбранного модуля SPI (тактирование и настройка регистров)
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	*/
+	// Включение модуля SPI1 (Mode 2: CPOL 1; CPHA 0)
+	SPI1->CR1 = 0;
+	SPI1->CR1 |= SPI_CR1_SSM;       // Software slave management
+	SPI1->CR1 |= SPI_CR1_SSI;       // Internal slave select
+	SPI1->CR1 |= SPI_CR1_MSTR;      // Master mode
+	SPI1->CR1 &= ~SPI_CR1_BR;       // Baud rate: 000 - Fpclk/2
+	SPI1->CR1 |= SPI_CR1_CPOL;		// Clock polarity 1
+	SPI1->CR1 &= ~SPI_CR1_CPHA;     // Clock phase 0
+	SPI1->CR1 |= SPI_CR1_SPE;		// Enable
+}
+
+/** Functions *********************************************************************************************************/
+
+// Включение выбранного модуля SPI
 void SPI_Enable_Pin(SPI_TypeDef* SPIx)
 {
     SPI_RCC_Enable(SPIx);   //Включение тактирования SPIx
     SPI_Init(SPIx);         //Настройка регистров SPIx
 }
 
-	/**
-	! Проверка готовности подключенного устройства.
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	*/
-SPI_Status_t SPI_is_device_ready(SPI_TypeDef* SPIx)			/************************************************* доделать ***************************/
-{
-	// проверить, есть ли устройство на шине и готово ли оно
-
-	return SPI_OK;
-}
-
-	/**
-	! Функция отправки данных по шине SPI
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	- SPI_data - указатель на массив отправляемых данных
-	- SPI_size - объем передаваемых данных в байтах
-	return: статус выполнения отправки данных (если отправка успешна, вернет SPI_OK)
-	*/
+// Отправка данных по SPI
 SPI_Status_t SPI_Transmit(SPI_TypeDef* SPIx, uint8_t* SPI_data, uint32_t SPI_size)
 {
     for (uint32_t i = 0; i < SPI_size; i++)
@@ -132,13 +106,7 @@ SPI_Status_t SPI_Transmit(SPI_TypeDef* SPIx, uint8_t* SPI_data, uint32_t SPI_siz
     return SPI_OK;
 }
 
-	/**
-	! Функция приема данных по шине SPI
-	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
-	- SPI_data - указатель на массив, в который запишутся принятые данные
-	- SPI_size - объем принимаемых данных в байтах
-	return: статус выполнения приема данных (если прием успешен, вернет SPI_OK)
-	*/
+// Прием данных по SPI
 SPI_Status_t SPI_Receive(SPI_TypeDef* SPIx, uint8_t* SPI_data, uint32_t SPI_size)
 {
     while (SPI_size)
