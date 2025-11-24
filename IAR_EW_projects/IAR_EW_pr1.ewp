@@ -2156,6 +2156,9 @@
         <file>
             <name>$PROJ_DIR$\systick.h</name>
         </file>
+        <file>
+            <name>$PROJ_DIR$\uart.h</name>
+        </file>
     </group>
     <group>
         <name>src</name>
@@ -2182,6 +2185,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\systick.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\uart.c</name>
         </file>
     </group>
     <file>
