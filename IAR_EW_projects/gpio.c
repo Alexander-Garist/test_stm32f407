@@ -117,9 +117,61 @@ void GPIO_Enable_I2C(GPIO_TypeDef* GPIO_port, int GPIO_pin)
 void GPIO_Enable_SPI(SPI_TypeDef* SPIx, GPIO_TypeDef* GPIO_port, int GPIO_pin)
 {
     GPIO_init_OUTPUT(GPIO_port, GPIO_pin);    // Включение тактирования + инициализация выхода
-
+/*
     // GPIO_init_AF_Mode настроит MODER и AFR
     if(SPIx == SPI1) GPIO_init_AF_Mode(GPIO_port, GPIO_pin, 5);   // Для SPI1 AF5
     if(SPIx == SPI2) GPIO_init_AF_Mode(GPIO_port, GPIO_pin, 5);   // Для SPI2 AF5
     if(SPIx == SPI3) GPIO_init_AF_Mode(GPIO_port, GPIO_pin, 6);   // Для SPI3 AF6
+*/
+	// GPIO_init_AF_Mode настроит MODER и AFR
+	switch ((uint32_t)SPIx)
+	{
+		case ((uint32_t)SPI1): GPIO_init_AF_Mode(GPIO_port, GPIO_pin, 5); break;	// Для SPI1 AF5
+		case ((uint32_t)SPI2): GPIO_init_AF_Mode(GPIO_port, GPIO_pin, 5); break;	// Для SPI2 AF5
+		case ((uint32_t)SPI3): GPIO_init_AF_Mode(GPIO_port, GPIO_pin, 6); break;	// Для SPI3 AF6
+	}
+}
+
+// Инициализация GPIO в режиме USART/UART
+void GPIO_Enable_USART(USART_TypeDef* USARTx, GPIO_TypeDef* GPIO_port_Tx, GPIO_TypeDef* GPIO_port_Rx, int GPIO_pin_Tx, int GPIO_pin_Rx)
+{
+	// Включение тактирования портов Tx Rx
+	GPIO_RCC_Enable(GPIO_port_Tx);
+	GPIO_RCC_Enable(GPIO_port_Rx);
+
+	// Настройка пинов Tx Rx в режиме альтернативной функции
+	// USART 1/2/3 => AF7
+	// UART 4/5 USART6 => AF8
+	switch ((uint32_t)USARTx)
+	{
+		case ((uint32_t)USART1):
+		GPIO_init_AF_Mode(GPIO_port_Tx, GPIO_pin_Tx, 7);
+		GPIO_init_AF_Mode(GPIO_port_Rx, GPIO_pin_Rx, 7);
+		break;
+
+		case ((uint32_t)USART2):
+		GPIO_init_AF_Mode(GPIO_port_Tx, GPIO_pin_Tx, 7);
+		GPIO_init_AF_Mode(GPIO_port_Rx, GPIO_pin_Rx, 7);
+		break;
+
+		case ((uint32_t)USART3):
+		GPIO_init_AF_Mode(GPIO_port_Tx, GPIO_pin_Tx, 7);
+		GPIO_init_AF_Mode(GPIO_port_Rx, GPIO_pin_Rx, 7);
+		break;
+
+		case ((uint32_t)UART4):
+		GPIO_init_AF_Mode(GPIO_port_Tx, GPIO_pin_Tx, 8);
+		GPIO_init_AF_Mode(GPIO_port_Rx, GPIO_pin_Rx, 8);
+		break;
+
+		case ((uint32_t)UART5):
+		GPIO_init_AF_Mode(GPIO_port_Tx, GPIO_pin_Tx, 8);
+		GPIO_init_AF_Mode(GPIO_port_Rx, GPIO_pin_Rx, 8);
+		break;
+
+		case ((uint32_t)USART6):
+		GPIO_init_AF_Mode(GPIO_port_Tx, GPIO_pin_Tx, 8);
+		GPIO_init_AF_Mode(GPIO_port_Rx, GPIO_pin_Rx, 8);
+		break;
+	}
 }

@@ -74,7 +74,7 @@ void SPI_Init_Mode_2(SPI_TypeDef* SPIx);
 	! Включение выбранного модуля SPI (тактирование и настройка регистров)
 	- SPIx - модуль SPI (SPI1, SPI2, SPI3)
 	*/
-void SPI_Enable_Pin(SPI_TypeDef* SPIx);
+void SPI_Enable(SPI_TypeDef* SPIx);
 
 	/**
 	! Функция отправки данных по шине SPI

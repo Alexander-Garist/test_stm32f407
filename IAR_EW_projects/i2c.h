@@ -33,7 +33,7 @@ typedef enum
 		Функция вызывается после настройки GPIO.
 	- I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
 	*/
-void I2C_Enable_Pin( I2C_TypeDef* I2Cx );
+void I2C_Enable( I2C_TypeDef* I2Cx );
 
 	/**
 	! Функция I2C_is_Device_Ready определяет, готово ли устройство, подключенное

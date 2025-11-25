@@ -2157,7 +2157,7 @@
             <name>$PROJ_DIR$\systick.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\uart.h</name>
+            <name>$PROJ_DIR$\usart.h</name>
         </file>
     </group>
     <group>
@@ -2187,7 +2187,7 @@
             <name>$PROJ_DIR$\systick.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\uart.c</name>
+            <name>$PROJ_DIR$\usart.c</name>
         </file>
     </group>
     <file>

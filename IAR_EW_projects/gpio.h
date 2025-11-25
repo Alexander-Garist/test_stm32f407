@@ -18,7 +18,10 @@
 	- GPIO_port - порт GPIO
 	- GPIO_pin - пин GPIO
 	*/
-void GPIO_set_HIGH(GPIO_TypeDef* GPIO_port, int GPIO_pin);
+void GPIO_set_HIGH(
+	GPIO_TypeDef*	GPIO_port,
+	int				GPIO_pin
+);
 
 	/**
 	! Функция GPIO_set_LOW инициализирует порт GPIO как вывод и устанавливает
@@ -26,7 +29,10 @@ void GPIO_set_HIGH(GPIO_TypeDef* GPIO_port, int GPIO_pin);
 	- GPIO_port - порт GPIO
 	- GPIO_pin - пин GPIO
 	*/
-void GPIO_set_LOW(GPIO_TypeDef* GPIO_port, int GPIO_pin);
+void GPIO_set_LOW(
+	GPIO_TypeDef*	GPIO_port,
+	int				GPIO_pin
+);
 
 	/**
 	! Функция GPIO_toggle_Pin инициализирует порт GPIO как вывод и меняет на нём
@@ -34,7 +40,10 @@ void GPIO_set_LOW(GPIO_TypeDef* GPIO_port, int GPIO_pin);
 	- GPIO_port - порт GPIO
 	- GPIO_pin - пин GPIO
 	*/
-void GPIO_toggle_Pin(GPIO_TypeDef* GPIO_port, int GPIO_pin);
+void GPIO_toggle_Pin(
+	GPIO_TypeDef*	GPIO_port,
+	int				GPIO_pin
+);
 
 	/**
 	! Функция GPIO_Button_Enable инициализирует порт GPIO как ввод, к которому
@@ -42,7 +51,10 @@ void GPIO_toggle_Pin(GPIO_TypeDef* GPIO_port, int GPIO_pin);
 	- GPIO_port - порт GPIO
 	- GPIO_pin - пин GPIO
 	*/
-void GPIO_Button_Enable(GPIO_TypeDef* GPIO_port, int GPIO_pin);
+void GPIO_Button_Enable(
+	GPIO_TypeDef*	GPIO_port,
+	int				GPIO_pin
+);
 
 /*********************** Иницализация портов GPIO в режиме альтернативной функции *************************************/
 	/**
@@ -51,7 +63,10 @@ void GPIO_Button_Enable(GPIO_TypeDef* GPIO_port, int GPIO_pin);
 	- GPIO_port - порт GPIO
 	- GPIO_pin - пин GPIO
 	*/
-void GPIO_Enable_I2C(GPIO_TypeDef* GPIO_port, int GPIO_pin);
+void GPIO_Enable_I2C(
+	GPIO_TypeDef*	GPIO_port,
+	int				GPIO_pin
+);
 
 	/**
 	! Функция GPIO_Enable_SPI инициализирует порт GPIO в режиме альтернативной
@@ -60,6 +75,27 @@ void GPIO_Enable_I2C(GPIO_TypeDef* GPIO_port, int GPIO_pin);
 	- GPIO_port - порт GPIO
 	- GPIO_pin - пин GPIO
 	*/
-void GPIO_Enable_SPI(SPI_TypeDef* SPIx, GPIO_TypeDef* GPIO_port, int GPIO_pin);
+void GPIO_Enable_SPI(
+	SPI_TypeDef*	SPIx,
+	GPIO_TypeDef*	GPIO_port,
+	int				GPIO_pin
+);
+
+	/**
+	! Функция GPIO_Enable_USART инициализирует порт GPIO в режиме альтернативной функции AF7 или AF8 (UART/USART) в
+		зависимости от выбранного модуля UART/USART.
+	- USARTx - модуль UART/USART.
+	- GPIO_port_Tx - порт передатчика.
+	- GPIO_port_Rx - порт приемника.
+	- GPIO_pin_Tx - пин передатчика.
+	- GPIO_pin_Rx - пин приемника.
+	*/
+void GPIO_Enable_USART(
+	USART_TypeDef*	USARTx,
+	GPIO_TypeDef*	GPIO_port_Tx,
+	GPIO_TypeDef*	GPIO_port_Rx,
+	int				GPIO_pin_Tx,
+	int				GPIO_pin_Rx
+);
 
 #endif /*__GPIO_H__ */

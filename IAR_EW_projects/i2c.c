@@ -91,7 +91,7 @@ static void I2C_Stop(I2C_TypeDef* I2Cx)
 /******************************************** Глобальные функции ******************************************************/
 
 // Включение модуля I2C
-void I2C_Enable_Pin(I2C_TypeDef* I2Cx)
+void I2C_Enable(I2C_TypeDef* I2Cx)
 {
     I2C_RCC_Enable(I2Cx);   //Включение тактирования I2C
     I2C_Init_Pin(I2Cx);     //Сброс перед работой, настройка частоты

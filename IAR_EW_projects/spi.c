@@ -78,7 +78,7 @@ void SPI_Init_Mode_2(SPI_TypeDef* SPIx)
 /** Functions *********************************************************************************************************/
 
 // Включение выбранного модуля SPI
-void SPI_Enable_Pin(SPI_TypeDef* SPIx)
+void SPI_Enable(SPI_TypeDef* SPIx)
 {
     SPI_RCC_Enable(SPIx);   //Включение тактирования SPIx
     SPI_Init(SPIx);         //Настройка регистров SPIx
