@@ -151,6 +151,8 @@ int main()
 	// USART1 должен отправить данные, его передатчик связан с приемником USART3
 	// вывести данные, полученные  USART3
 
+	//USART_Send_String(USART1, "abcdefghijk");
+
 
 
 

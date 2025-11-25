@@ -11,10 +11,8 @@
 #include "CMSIS/stm32f4xx.h"
 
 /** Defines ***********************************************************************************************************/
-// Внешние переменные для приема команд
-extern volatile char usart_rx_buffer[64];
-extern volatile uint8_t usart_rx_index;
-extern volatile uint8_t usart_command_ready;
+
+
 /** Functions *********************************************************************************************************/
 
 	/**
@@ -35,49 +33,7 @@ void USART_Enable(
 	uint32_t		baudrate
 );
 
-/*********************************** Функции отправки по UART/USART ***************************************************/
 
-	/**
-	! Отправка одного символа.
-	- USARTx - выбранный модуль UART/USART.
-	- symbol - отправляемый символ.
-	*/
-void USART_Send_Char(USART_TypeDef* USARTx, char symbol);
-
-	/**
-	! Отправка строки.
-	- USARTx - выбранный модуль UART/USART.
-	- str - отправляемая строка (указатель на константный массив символов).
-	*/
-void USART_Send_String(USART_TypeDef* USARTx, const char* str);
-
-	/**
-	! Отправка числа.
-	- USARTx - выбранный модуль UART/USART.
-	- number - отправляемое число.
-	*/
-void USART_Send_Number(USART_TypeDef* USARTx, uint32_t number);
-
-/********************************** Функции приема по UART/USART ******************************************************/
-
-	/**
-	! Прием одного символа без ожидания.
-	- USARTx - выбранный модуль UART/USART.
-	- symbol - принимаемый символ.
-	return: 1 если символ принят, 0 если нет данных
-	*/
-uint8_t USART_Receive_Char(USART_TypeDef* USARTx, char* symbol);
-
-	/**
-	! Проверка наличия принятых данных.
-	return: 1 если данные приняты, 0 если нет.
-	*/
-uint8_t USART_Is_Data_Received(void);
-
-	/**
-	! Очистка буфера приема
-	*/
-void USART_Clear_Buffer(void);
 
 /****************************** Обработчики прерываний UART/USART *****************************************************/
 
