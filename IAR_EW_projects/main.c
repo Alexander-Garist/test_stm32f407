@@ -151,13 +151,45 @@ int main()
 	// USART1 должен отправить данные, его передатчик связан с приемником USART3
 	// вывести данные, полученные  USART3
 
-	//USART_Send_String(USART1, "abcdefghijk");
+	// Тестовое сообщение при старте
+	USART_Send_String(USART1, "USART1 Initialized - Ready to send to USART3\r\n");
+	USART_Send_String(USART3, "USART3 Initialized - Ready to receive from USART1\r\n");
 
+	// Основной цикл тестирования USART
+	uint32_t usart_test_counter = 0;
+	while(usart_test_counter < 5)  // 5 тестовых циклов
+	{
+		// Отправка из USART1 в USART3
+		USART_Send_String(USART1, "Hello from USART1 to USART3\r\n");
 
+		// Проверка приема в USART3
+		if (USART_Is_Data_Received(USART3))
+		{
+			char* received_data = USART_Get_Rx_Buffer(USART3);
+			USART_Send_String(USART1, "USART3 received: ");
+			USART_Send_String(USART1, received_data);
+			USART_Send_String(USART1, "\r\n");
+			USART_Clear_Buffer(USART3);
+		}
 
+		// Отправка из USART3 в USART1
+		USART_Send_String(USART3, "Hello from USART3 to USART1\r\n");
 
+		// Проверка приема в USART1
+		if (USART_Is_Data_Received(USART1))
+		{
+			char* received_data = USART_Get_Rx_Buffer(USART1);
+			USART_Send_String(USART3, "USART1 received: ");
+			USART_Send_String(USART3, received_data);
+			USART_Send_String(USART3, "\r\n");
+			USART_Clear_Buffer(USART1);
+		}
 
+		delay_ms(1000);
+		usart_test_counter++;
+	}
 
+	USART_Send_String(USART1, "USART test completed. Starting main application...\r\n");
 
 
 

@@ -11,7 +11,7 @@
 #include "CMSIS/stm32f4xx.h"
 
 /** Defines ***********************************************************************************************************/
-
+#define USART_BUFFER_SIZE	64
 
 /** Functions *********************************************************************************************************/
 
@@ -33,7 +33,16 @@ void USART_Enable(
 	uint32_t		baudrate
 );
 
+// Функции отправки
+void USART_Send_Char(USART_TypeDef* USARTx, char symbol);
+void USART_Send_String(USART_TypeDef* USARTx, const char* str);
+void USART_Send_Number(USART_TypeDef* USARTx, uint32_t number);
 
+// Функции приема
+uint8_t USART_Receive_Char(USART_TypeDef* USARTx, char* symbol);
+uint8_t USART_Is_Data_Received(USART_TypeDef* USARTx);
+char* USART_Get_Rx_Buffer(USART_TypeDef* USARTx);
+void USART_Clear_Buffer(USART_TypeDef* USARTx);
 
 /****************************** Обработчики прерываний UART/USART *****************************************************/
 
