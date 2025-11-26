@@ -10,39 +10,20 @@
 #include "string.h"
 
 /** Defines ***********************************************************************************************************/
+// Частоты шин APB1 APB2
 #define freq_APB1	16000000
 #define freq_APB2	16000000
 
-// Структура для хранения данных каждого USART
-typedef struct {
-    volatile char rx_buffer[USART_BUFFER_SIZE];
-    volatile uint8_t rx_index;
-    volatile uint8_t command_ready;
-} USART_Data_t;
+// Размер буфера приемника
+#define USART_BUFFER_SIZE	256
 
-// Данные для каждого USART
-static USART_Data_t usart1_data = {0};
-static USART_Data_t usart2_data = {0};
-static USART_Data_t usart3_data = {0};
-static USART_Data_t usart4_data = {0};
-static USART_Data_t usart5_data = {0};
-static USART_Data_t usart6_data = {0};
+/************************** Переменные ********************************************************************************/
+
+uint8_t USART_Rx_Buffer[USART_BUFFER_SIZE];	// Буфер приемника на 256 байт
+uint8_t Buffer_Index = 0;					// Индекс позиции в буфере
+uint8_t Command_Is_Received = 0;			// Флаг, показывающий, что команда принята целиком
+
 /***************************************** Статические функции ********************************************************/
-
-// Получение указателя на данные конкретного USART
-static USART_Data_t* USART_Get_Data(USART_TypeDef* USARTx)
-{
-    switch ((uint32_t)USARTx)
-    {
-        case ((uint32_t)USART1): return &usart1_data;
-        case ((uint32_t)USART2): return &usart2_data;
-        case ((uint32_t)USART3): return &usart3_data;
-        case ((uint32_t)UART4):  return &usart4_data;
-        case ((uint32_t)UART5):  return &usart5_data;
-        case ((uint32_t)USART6): return &usart6_data;
-        default: return NULL;
-    }
-}
 
 // Включение тактирования модуля UART/USART
 static void USART_RCC_Enable(USART_TypeDef* USARTx)
@@ -74,82 +55,33 @@ static void USART_Init(USART_TypeDef* USARTx, uint32_t baudrate)
 
 	// Включение USARTx: TX, RX и прерывание по приему
     USARTx->CR1 = USART_CR1_TE 			// Transmitter enable
-				| USART_CR1_RE			// Receiver enable
-				| USART_CR1_RXNEIE;		// Разрешение прерываний по приемнику (т.е. если приемник не пустой, вызывается обработчик прерывания соответствующего модуля USART)
+				| USART_CR1_RE;			// Receiver enable
 
     USARTx->CR1 |= USART_CR1_UE;		// USART enable
 }
 
-// Разрешение обработки прерываний USART и установка высокого приоритета соответствующего прерывания
-static void USART_EnableIRQ(USART_TypeDef* USARTx)
-{
-    switch((uint32_t)USARTx) {
-        case ((uint32_t)USART1):
-            NVIC_EnableIRQ(USART1_IRQn);
-			NVIC_SetPriority(USART1_IRQn, 0);
-            break;
-
-        case ((uint32_t)USART2):
-            NVIC_EnableIRQ(USART2_IRQn);
-    		NVIC_SetPriority(USART2_IRQn, 0);
-            break;
-
-        case ((uint32_t)USART3):
-            NVIC_EnableIRQ(USART3_IRQn);
-			NVIC_SetPriority(USART3_IRQn, 0);
-            break;
-
-        case ((uint32_t)UART4):
-            NVIC_EnableIRQ(UART4_IRQn);
-			NVIC_SetPriority(UART4_IRQn, 0);
-            break;
-
-        case ((uint32_t)UART5):
-            NVIC_EnableIRQ(UART5_IRQn);
-			NVIC_SetPriority(UART5_IRQn, 0);
-            break;
-
-        case ((uint32_t)USART6):
-			NVIC_EnableIRQ(USART6_IRQn);
-			NVIC_SetPriority(USART6_IRQn, 0);
-            break;
-    }
-}
-
-
-
-// Обработка принятого символа в прерывании
-static void USART_Process_Rx_Char(USART_TypeDef* USARTx, char received_char)
-{
-    USART_Data_t* data = USART_Get_Data(USARTx);
-    if (!data) return;
-
-    // Обрабатываем конец команды (Enter)
-    if (received_char == '\r' || received_char == '\n')
-    {
-        if (data->rx_index > 0)
-        {
-            data->rx_buffer[data->rx_index] = '\0';
-            data->command_ready = 1;
-            data->rx_index = 0;
-        }
-    }
-    // Обрабатываем обычный символ
-    else if (data->rx_index < (USART_BUFFER_SIZE - 1))
-    {
-        data->rx_buffer[data->rx_index++] = received_char;
-    }
-    // Переполнение буфера
-    else
-    {
-        data->rx_index = 0;
-        data->rx_buffer[0] = '\0';
-    }
-}
-
-
-
 /*************************************** Публичные функции ************************************************************/
+
+/********************* Включение, инициализация модуля UART/USART, разрешение прерываний USART ************************/
+
+// Включение и настройка модуля USARTx с использованием структуры инициализации
+void USART_Enable_with_struct(USART_Init_Struct* Init_Struct)
+{
+	// Включение тактирования USARTx
+	USART_RCC_Enable(Init_Struct->USARTx);
+
+	// Включение тактирования GPIO, настройка заданных пинов приемника и передатчика в режиме AF (регистры MODER и AFR)
+	GPIO_Enable_USART(
+		Init_Struct->USARTx,
+		Init_Struct->GPIO_port_Tx,
+		Init_Struct->GPIO_port_Rx,
+		Init_Struct->GPIO_pin_Tx,
+		Init_Struct->GPIO_pin_Rx
+	);
+
+	// Настройка регистра BRR и включение модуля USARTx
+	USART_Init(Init_Struct->USARTx, Init_Struct->baudrate);
+}
 
 // Включение и настройка модуля USARTx ( USART1 // USART2 // USART3 // UART4 // UART5 // USART6)
 void USART_Enable(USART_TypeDef* USARTx, GPIO_TypeDef* GPIO_port_Tx, int GPIO_pin_Tx, GPIO_TypeDef* GPIO_port_Rx, int GPIO_pin_Rx , uint32_t baudrate)
@@ -162,19 +94,95 @@ void USART_Enable(USART_TypeDef* USARTx, GPIO_TypeDef* GPIO_port_Tx, int GPIO_pi
 
 	// Настройка регистра BRR и включение модуля USARTx
 	USART_Init(USARTx, baudrate);
-
-	// Разрешение обработки прерываний USART и установка высокого приоритета соответствующего прерывания
-    USART_EnableIRQ(USARTx);
 }
 
+// Разрешение обработки прерываний USART и установка приоритета соответствующего прерывания
+void USART_EnableIRQ(USART_TypeDef* USARTx, uint32_t priority)
+{
+	// Разрешение прерываний по приемнику (обработчик прерывания модуля USARTx вызывается если приемник не пустой)
+	USARTx->CR1 |= USART_CR1_RXNEIE;
+
+    switch((uint32_t)USARTx) {
+        case ((uint32_t)USART1):
+            NVIC_EnableIRQ(USART1_IRQn);
+			NVIC_SetPriority(USART1_IRQn, priority);
+            break;
+
+        case ((uint32_t)USART2):
+            NVIC_EnableIRQ(USART2_IRQn);
+    		NVIC_SetPriority(USART2_IRQn, priority);
+            break;
+
+        case ((uint32_t)USART3):
+            NVIC_EnableIRQ(USART3_IRQn);
+			NVIC_SetPriority(USART3_IRQn, priority);
+            break;
+
+        case ((uint32_t)UART4):
+            NVIC_EnableIRQ(UART4_IRQn);
+			NVIC_SetPriority(UART4_IRQn, priority);
+            break;
+
+        case ((uint32_t)UART5):
+            NVIC_EnableIRQ(UART5_IRQn);
+			NVIC_SetPriority(UART5_IRQn, priority);
+            break;
+
+        case ((uint32_t)USART6):
+			NVIC_EnableIRQ(USART6_IRQn);
+			NVIC_SetPriority(USART6_IRQn, priority);
+            break;
+    }
+}
+
+// Запрет обработки прерываний USART
+void USART_DisableIRQ(USART_TypeDef* USARTx)
+{
+	// Разрешение прерываний по приемнику (обработчик прерывания модуля USARTx вызывается если приемник не пустой)
+	USARTx->CR1 &= ~USART_CR1_RXNEIE;
+
+    switch((uint32_t)USARTx) {
+        case ((uint32_t)USART1):	NVIC_DisableIRQ(USART1_IRQn);	break;
+        case ((uint32_t)USART2):    NVIC_DisableIRQ(USART2_IRQn);	break;
+        case ((uint32_t)USART3):	NVIC_DisableIRQ(USART3_IRQn);	break;
+        case ((uint32_t)UART4):		NVIC_DisableIRQ(UART4_IRQn);	break;
+        case ((uint32_t)UART5):		NVIC_DisableIRQ(UART5_IRQn);	break;
+        case ((uint32_t)USART6):	NVIC_DisableIRQ(USART6_IRQn);	break;
+    }
+}
+
+/******************************** Прием/передача **********************************************************************/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// отправка одного символа
 void USART_Send_Char(USART_TypeDef* USARTx, char c)
 {
-    // Ждем пока буфер передатчика освободится
-    while (!(USARTx->SR & USART_SR_TXE));
-    // Отправляем символ
-    USARTx->DR = c;
+    while (!(USARTx->SR & USART_SR_TXE));	// Ожидание пока буфер передатчика освободится
+    USARTx->DR = c;							// Отправка 1 символа
 }
 
+// посимвольная отправка строки
 void USART_Send_String(USART_TypeDef* USARTx, const char* str)
 {
     while (*str)
@@ -183,6 +191,7 @@ void USART_Send_String(USART_TypeDef* USARTx, const char* str)
     }
 }
 
+// отправка числа как строки цифр
 void USART_Send_Number(USART_TypeDef* USARTx, uint32_t num)
 {
     char buffer[12];
@@ -204,100 +213,23 @@ void USART_Send_Number(USART_TypeDef* USARTx, uint32_t num)
     USART_Send_String(USARTx, p);
 }
 
-uint8_t USART_Receive_Char(USART_TypeDef* USARTx, char* c)
+
+
+void USART_Receive_Char(USART_TypeDef* USARTx, char* c)
 {
-    if (USARTx->SR & USART_SR_RXNE)
-    {
-        *c = (char)(USARTx->DR & 0xFF);
-        return 1;
-    }
-    return 0;
+	// ожидание появления символа в приемнике
+	while (!(USART3->SR & USART_SR_RXNE)){}
+
+	// запись символа из приемника
+	*c = (char)(USARTx->DR & 0xFF);
 }
 
-uint8_t USART_Is_Data_Received(USART_TypeDef* USARTx)
-{
-    USART_Data_t* data = USART_Get_Data(USARTx);
-    return data ? data->command_ready : 0;
-}
 
-char* USART_Get_Rx_Buffer(USART_TypeDef* USARTx)
-{
-    USART_Data_t* data = USART_Get_Data(USARTx);
-    return data ? (char*)data->rx_buffer : NULL;
-}
 
-void USART_Clear_Buffer(USART_TypeDef* USARTx)
-{
-    USART_Data_t* data = USART_Get_Data(USARTx);
-    if (data)
-    {
-        data->rx_index = 0;
-        data->command_ready = 0;
-        data->rx_buffer[0] = '\0';
-    }
-}
 
 /***************************************** Обработчики прерываний *****************************************************/
-
-void USART1_IRQHandler(void)
-{
-    if (USART1->SR & USART_SR_RXNE)
-    {
-        char received_char = (char)(USART1->DR & 0xFF);
-        USART_Process_Rx_Char(USART1, received_char);
-    }
-}
-
-void USART2_IRQHandler(void)
-{
-    if (USART2->SR & USART_SR_RXNE)
-    {
-        char received_char = (char)(USART2->DR & 0xFF);
-        USART_Process_Rx_Char(USART2, received_char);
-    }
-}
-
+// сделать нормальный обработчик прерывания USART3
 void USART3_IRQHandler(void)
 {
-    if (USART3->SR & USART_SR_RXNE)
-    {
-        char received_char = (char)(USART3->DR & 0xFF);
-        USART_Process_Rx_Char(USART3, received_char);
 
-        // Автоматическая пересылка из USART3 в USART1
-        USART_Send_Char(USART1, received_char);
-
-        // Индикация приема (опционально)
-        GPIO_set_HIGH(GPIOD, 15);
-        delay_ms(10);  // Короткая индикация
-        GPIO_set_LOW(GPIOD, 15);
-    }
 }
-
-void UART4_IRQHandler(void)
-{
-    if (UART4->SR & USART_SR_RXNE)
-    {
-        char received_char = (char)(UART4->DR & 0xFF);
-        USART_Process_Rx_Char(UART4, received_char);
-    }
-}
-
-void UART5_IRQHandler(void)
-{
-    if (UART5->SR & USART_SR_RXNE)
-    {
-        char received_char = (char)(UART5->DR & 0xFF);
-        USART_Process_Rx_Char(UART5, received_char);
-    }
-}
-
-void USART6_IRQHandler(void)
-{
-    if (USART6->SR & USART_SR_RXNE)
-    {
-        char received_char = (char)(USART6->DR & 0xFF);
-        USART_Process_Rx_Char(USART6, received_char);
-    }
-}
-
