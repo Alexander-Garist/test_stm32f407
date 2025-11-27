@@ -5,6 +5,8 @@
 
 /** Includes **********************************************************************************************************/
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "CMSIS/stm32f4xx.h"
 #include "systick.h"
 #include "gpio.h"
@@ -49,8 +51,14 @@ uint8_t button_state = 0;						// Состояние кнопки нажата/�
 uint32_t button_last_time = 0;					// Время последнего нажатия
 uint16_t data_2_byte[data_2_byte_SIZE];         // Массив двухбайтных данных 2048 чисел = 4096 байт
 
-extern uint32_t USART3_Received_Number;			// число, получаемое по USART3
-extern char USART3_rec_char;
+
+// параметры выходного сигнала
+typedef struct
+	{
+		uint32_t frequency;
+		uint8_t amplitude;
+		uint8_t wave_form;
+	}Signal_Parameters;
 /** Функции ***********************************************************************************************************/
 
 	/**
@@ -130,9 +138,7 @@ int main()
 	//USART_Enable(USART3, GPIOB, 10, GPIOB, 11, 115200);	// Включение модуля USART3; PB10 Tx; PB11 Rx; Baudrate 115200
 
 	// Включение модуля USART3 с использованием структуры инициализации
-
-	// Объявление структуры инициализации
-	USART_Init_Struct Init_USART3;
+	USART_Init_Struct Init_USART3;				// Объявление структуры инициализации
 
 	// Заполнение полей
 	Init_USART3.USARTx = USART3;
@@ -146,70 +152,52 @@ int main()
 
 	/******************************* Проверка работоспособности USART *************************************************/
 
-	USART_Send_String(USART3, " USART3 connected \r\n");
+	USART_Send_String(USART3, "USART3 connected \r\n");
 
-/*
-	for (int i = 0; i < 10; i++)
-	{
-		USART_Send_Number(USART3, i);
-		USART_Send_String(USART3, " Hello world\r\n");
-	}
-*/
 
 
     /**************** Основной цикл: мигание светодиодов и обработка нажатий кнопки ***********************************/
 
 	// включили генератор сигналов, задали параметры (частота, амплитуда, форма сигнала)
 	// AD9833_Module_Init(SPI_TypeDef* SPIx, uint32_t frequency, uint8_t amplitude, uint16_t mode);
+	Signal_Parameters Output_Signal;
+	Output_Signal.frequency = 1000;
+	Output_Signal.amplitude = 128;
+	Output_Signal.wave_form = 0;
+
+	printf("Начальные параметры сигнала:\n");
+	printf("частота:%d\n", Output_Signal.frequency);
+	printf("амплитуда:%d\n", Output_Signal.amplitude);
+	printf("форма:%d\n", Output_Signal.wave_form);
 
 	// генератор принял по SPI параметры, запомнил FREG0 или FREG1 и форму сигнала, на MCP41010 установлена амплитуда
 	// дальше эти параметры будут меняться через USART3 (пришла команда FREQUENCY:AMPLITUDE:WAVE, обработчик принятых данных извлек из нее 3 числа и записал новые параметры сигнала)
 	// эти новые параметры сигнала надо отправить генератору по SPI
 
-	char command[10];			// команда это последовательность символов длиной 5 байт
+	char command[15];			// команда это последовательность символов длиной максимум 15 байт (14 байт информация + 1 байт \0 12500000:255:1\0)
 	uint8_t command_index = 0;	// номер байта команды, который сейчас записывается
+
+	uint8_t param_counter = 0;	// счетчик параметров в команде
+
 
     while (1)
     {
-
-
-		while (command_index < 10)	// пока команда не принята полностью
-		{
-			while (!(USART3->SR & USART_SR_RXNE)){}	// ожидание пока не придет в приемник ОДИН байт
-
-			command[command_index] = USART3->DR;	// запись пришедшего байта
-			command_index++;
-		}
 		command_index = 0;
 
-		// команда уже записана, нужно извлечь числа
-		uint32_t freq = 0;
-		uint32_t amp = 0;
-		uint32_t mode = 0;
-		uint8_t divider1_position = 0;	// первый разделитель
-		uint8_t divider2_position = 0;	// второй разделитель
-
-		while (command[command_index] != ':')
+		while (command_index < 14)		// Прием длится пока не приняты все 14 байт или не распознаны 3 параметра ЧАСТОТА:АМПЛИТУДА:ФОРМА
 		{
+			while (!(USART3->SR & USART_SR_RXNE)){}	// ожидание пока не придет в приемник ОДИН байт
+			command[command_index] = USART3->DR;	// запись пришедшего байта
+			if (command[command_index] == '\n') break;	// конечный символ на случай если нужно принять менее 14 байт
 			command_index++;
 		}
-		divider1_position = command_index;
-		command_index++;
-		while (command[command_index] != ':')
-		{
-			command_index++;
-		}
-		divider2_position = command_index;
-
-		for (int i = divider1_position; i > 0; i--)
-		{
-
-		}
 
 
+		command[command_index] = '\0';
+		printf("принятая команда:%s\n", command);
 
 		// отправить команду обратно
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < command_index; i++)
 		{
 			USART_Send_Char(USART3, command[i]);
 		}
@@ -220,9 +208,54 @@ int main()
 
 
 
+		char* param = strtok(command, ":");
+		while ((param != NULL) && (param_counter < 3))
+		{
+			printf("вывод как строка:%s\n", param);
+			uint32_t param_number = atoi(param);
+			printf("вывод как число:%d\n", param_number);
+			param = strtok(NULL, ":");
+			param_counter++;
+			if (param_counter == 1) Output_Signal.frequency = param_number;
+			if (param_counter == 2) Output_Signal.amplitude = param_number;
+			if (param_counter == 3) Output_Signal.wave_form = param_number;
+		}
+		param_counter = 0;
+
+		printf("\n\nновые параметры сигнала:\n");
+		printf("частота:%d\n", Output_Signal.frequency);
+		printf("амплитуда:%d\n", Output_Signal.amplitude);
+		printf("форма:%d\n", Output_Signal.wave_form);
 
 
 
+
+
+
+
+
+
+
+
+
+/*		рабочий вариант, кореектная команда принимается по USART3 и отправляется обратно
+		while (command_index < 10)	// пока команда не принята полностью
+		{
+			while (!(USART3->SR & USART_SR_RXNE)){}	// ожидание пока не придет в приемник ОДИН байт
+
+			command[command_index] = USART3->DR;	// запись пришедшего байта
+			command_index++;
+		}
+		command_index = 0;
+
+		// отправить команду обратно
+		for (int i = 0; i < 10; i++)
+		{
+			USART_Send_Char(USART3, command[i]);
+		}
+		USART_Send_Char(USART3, '\r');
+		USART_Send_Char(USART3, '\n');
+*/
 
     }
 }
