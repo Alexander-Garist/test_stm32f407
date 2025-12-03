@@ -1,9 +1,10 @@
 /**
   * @file    usart.c
-  * @brief   Файл содержит реализации функций UART
+  * @brief   Файл содержит реализации функций UART/USART
   */
 
 /** Includes **********************************************************************************************************/
+#include <stdio.h>
 #include "usart.h"
 #include "gpio.h"
 #include "systick.h"
@@ -13,15 +14,6 @@
 // Частоты шин APB1 APB2
 #define freq_APB1	16000000
 #define freq_APB2	16000000
-
-// Размер буфера приемника
-#define USART_BUFFER_SIZE	256
-
-/************************** Переменные ********************************************************************************/
-
-uint8_t USART_Rx_Buffer[USART_BUFFER_SIZE];	// Буфер приемника на 256 байт
-uint8_t Buffer_Index = 0;					// Индекс позиции в буфере
-uint8_t Command_Is_Received = 0;			// Флаг, показывающий, что команда принята целиком
 
 /***************************************** Статические функции ********************************************************/
 
@@ -65,7 +57,7 @@ static void USART_Init(USART_TypeDef* USARTx, uint32_t baudrate)
 /********************* Включение, инициализация модуля UART/USART, разрешение прерываний USART ************************/
 
 // Включение и настройка модуля USARTx с использованием структуры инициализации
-void USART_Enable_with_struct(USART_Init_Struct* Init_Struct)
+void USART_Enable(USART_Init_Struct* Init_Struct)
 {
 	// Включение тактирования USARTx
 	USART_RCC_Enable(Init_Struct->USARTx);
@@ -81,19 +73,6 @@ void USART_Enable_with_struct(USART_Init_Struct* Init_Struct)
 
 	// Настройка регистра BRR и включение модуля USARTx
 	USART_Init(Init_Struct->USARTx, Init_Struct->baudrate);
-}
-
-// Включение и настройка модуля USARTx ( USART1 // USART2 // USART3 // UART4 // UART5 // USART6)
-void USART_Enable(USART_TypeDef* USARTx, GPIO_TypeDef* GPIO_port_Tx, int GPIO_pin_Tx, GPIO_TypeDef* GPIO_port_Rx, int GPIO_pin_Rx , uint32_t baudrate)
-{
-	// Включение тактирования USARTx
-	USART_RCC_Enable(USARTx);
-
-	// Включение тактирования GPIO, настройка заданных пинов приемника и передатчика в режиме AF (регистры MODER и AFR)
-	GPIO_Enable_USART(USARTx, GPIO_port_Tx, GPIO_port_Rx, GPIO_pin_Tx, GPIO_pin_Rx);
-
-	// Настройка регистра BRR и включение модуля USARTx
-	USART_Init(USARTx, baudrate);
 }
 
 // Разрешение обработки прерываний USART и установка приоритета соответствующего прерывания
@@ -153,28 +132,6 @@ void USART_DisableIRQ(USART_TypeDef* USARTx)
 
 /******************************** Прием/передача **********************************************************************/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // отправка одного символа
 void USART_Send_Char(USART_TypeDef* USARTx, char c)
 {
@@ -213,8 +170,6 @@ void USART_Send_Number(USART_TypeDef* USARTx, uint32_t num)
     USART_Send_String(USARTx, p);
 }
 
-
-
 void USART_Receive_Char(USART_TypeDef* USARTx, char* c)
 {
 	// ожидание появления символа в приемнике
@@ -224,8 +179,22 @@ void USART_Receive_Char(USART_TypeDef* USARTx, char* c)
 	*c = (char)(USARTx->DR & 0xFF);
 }
 
+/**********************************************************************************************************************/
+// Вывести текущее содержимое буфера USART
+void USART_print_Buffer(char* buffer, uint32_t buffer_size)
+{
+    for (int i = 0; i < buffer_size; i++)
+    {
+        printf("%c", buffer[i]);
+    }
+    printf("\n\n");
+}
 
-
+// Очистить буфер
+void USART_clear_Buffer(char* buffer)
+{
+    *buffer = '\0';
+}
 
 /***************************************** Обработчики прерываний *****************************************************/
 // сделать нормальный обработчик прерывания USART3
