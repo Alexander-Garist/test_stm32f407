@@ -132,51 +132,36 @@ void USART_DisableIRQ(USART_TypeDef* USARTx)
 
 /******************************** Прием/передача **********************************************************************/
 
-// отправка одного символа
-void USART_Send_Char(USART_TypeDef* USARTx, char c)
+// Функция побайтной отправки size байт данных по USART
+USART_Status_t USART_Transmit(USART_TypeDef* USARTx, char* data, uint32_t size)
 {
-    while (!(USARTx->SR & USART_SR_TXE));	// Ожидание пока буфер передатчика освободится
-    USARTx->DR = c;							// Отправка 1 символа
+	// добавить таймаут отправки
+	// если не отправлено до таймаута, выкинуть ошибку USART_ERROR_TRANSMIT
+	for (uint32_t index = 0; index < size; index++)
+	{
+		while (!(USARTx->SR & USART_SR_TXE));	// Ожидание пока буфер передатчика освободится
+		USARTx->DR = data[index];				// Отправка 1 символа
+	}
+	return USART_OK;
 }
 
-// посимвольная отправка строки
-void USART_Send_String(USART_TypeDef* USARTx, const char* str)
+// Побайтный прием из USART до стопового байта
+USART_Status_t USART_Receive(USART_TypeDef* USARTx, char* buffer, char STOP_BYTE)
 {
-    while (*str)
-    {
-        USART_Send_Char(USARTx, *str++);
-    }
-}
+	uint32_t received_bytes = 0;				// Количество принятых байт
 
-// отправка числа как строки цифр
-void USART_Send_Number(USART_TypeDef* USARTx, uint32_t num)
-{
-    char buffer[12];
-    char *p = buffer + 11;
-    *p = '\0';
+	while (received_bytes < MAX_BUFFER_SIZE)	// За одну операцию чтения можно считать не более одного буфера
+	{
+		while (!(USARTx->SR & USART_SR_RXNE)){}				// Ожидание пока не придет в приемник ОДИН байт
+		buffer[received_bytes] = USARTx->DR;				// Запись пришедшего байта в буфер
+		if (buffer[received_bytes] == STOP_BYTE)
+		{
+			break;		// Конечный символ на случай если нужно принять менее 256 байт
+		}
+		received_bytes++;
+	}
 
-    if (num == 0)
-    {
-        USART_Send_Char(USARTx, '0');
-        return;
-    }
-
-    while (num > 0)
-    {
-        *--p = '0' + (num % 10);
-        num /= 10;
-    }
-
-    USART_Send_String(USARTx, p);
-}
-
-void USART_Receive_Char(USART_TypeDef* USARTx, char* c)
-{
-	// ожидание появления символа в приемнике
-	while (!(USART3->SR & USART_SR_RXNE)){}
-
-	// запись символа из приемника
-	*c = (char)(USARTx->DR & 0xFF);
+	return USART_OK;
 }
 
 /**********************************************************************************************************************/

@@ -144,9 +144,6 @@ int main()
 
 	/*************** Настройка USART и инициализация портов GPIO в режиме альтернативной функции **********************/
 
-	// Включение модуля USART3 без структуры инициализации
-	//USART_Enable(USART3, GPIOB, 10, GPIOB, 11, 115200);	// Включение модуля USART3; PB10 Tx; PB11 Rx; Baudrate 115200
-
 	// Включение модуля USART3 с использованием структуры инициализации
 	USART_Init_Struct Init_USART3;
 
@@ -160,8 +157,9 @@ int main()
 
 	USART_Enable(&Init_USART3);
 
+	/*********************************** Настройка AD9833, инициализация портов ***************************************/
 
-		/** Схема подключения AD9833 к STM32F407:
+	/** Схема подключения AD9833 к STM32F407:
 		CS	-> оранжевый	-> PA4
 		FSY -> белый		-> PA3
 		CLK -> черный		-> PA5 (SPI1_SCK)
@@ -177,11 +175,10 @@ int main()
 	SPI_Init_Mode_2(SPI1);		// Включение SPI1 (Mode 2: CPOL 1 CPHA 0)
 	AD9833_Reset(SPI1);			// Сброс генератора
 
-
-
 	/******************************* Проверка работоспособности USART *************************************************/
 
-	USART_Send_String(USART3, "USART3 connected \r\n");
+	char message[] = "USART3 connected \r\n";
+	USART_Transmit(USART3, message, strlen(message));
 
 	// Создание экземпляра выходного сигнала, инициализация начальных параметров
 	Signal_Parameters Output_Signal;
@@ -193,37 +190,78 @@ int main()
 	AD9833_Module_Init(SPI1, &Output_Signal);
 
 	char BUFFER_USART[MAX_BUFFER_SIZE];				// строка, хранящая буфер USART, т.е. еще не отфильтрованный от мусора
-	uint32_t received_bytes = 0;					// количество принятых байт
+	//uint32_t received_bytes = 0;					// количество принятых байт
 	char BUFFER_USART_FILTERED[MAX_BUFFER_SIZE];	// отфильтрованный буфер USART
+
+	/************************************** Проверка работоспособности модуля SPI2 ************************************/
+    /************************************** Проверка чтения ***********************************************************/
+	/************************************** Проверка стирания памяти **************************************************/
+    /************************************** Проверка записи и чтения **************************************************/
+    /************************************** Проверка работоспособности модуля I2C1 ************************************/
 
     /**************** Основной цикл: мигание светодиодов и обработка нажатий кнопки ***********************************/
 	/** Основной цикл теперь будет содержать не только моргание светодиодами и обработку нажатий кнопки, но и прием/передачу команд для генератора сигналов через USART */
 
-    while (1)
-    {
+	uint32_t start = get_current_ms();       			// Момент отсчета времени для основного цикла
+	while (1)
+	{
 		// пока флаг RXNE не поднят это означает что ничего еще не пришло по USART, значит проверяем есть ли команды в очереди
+		// если же RXNE поднят, значит нужно принять байты из USART
 		while (!(USART3->SR & USART_SR_RXNE))
 		{
+			if (is_time_passed_ms(start, time_delay))		// Первая половина цикла: светодиоды выключены
+			{
+				LED_turnOFF_4_LED();
+			}
+
+			if (is_time_passed_ms(start, time_delay * 2))	// Вторая половина цикла: светодиоды включаются в соответствии с выбранным режимом
+			{
+				switch (blink_mode)
+				{
+					case 0: GPIO_set_HIGH(GPIOD, 12);   break;
+					case 1: GPIO_set_HIGH(GPIOD, 13);   break;
+					case 2: GPIO_set_HIGH(GPIOD, 14);   break;
+				}
+				start = get_current_ms();
+			}
 			while (Amount_of_Commands)	// выполнить все команды, какие есть в очереди
 			{
 				AD9833_Execute_Command(USART3, &Output_Signal);	// после выполнения команды отправить команду обратно отправителю
+
 				AD9833_Module_Init(SPI1, &Output_Signal);
 				//AD9833_print_Signal_Parameters(&Output_Signal);
 			}
 		}
 
-		// прием буфера без фильтрации
-		received_bytes = 0;
-		while (received_bytes < MAX_BUFFER_SIZE)
-		{
-			while (!(USART3->SR & USART_SR_RXNE)){}				// ожидание пока не придет в приемник ОДИН байт
-			BUFFER_USART[received_bytes] = USART3->DR;			// запись пришедшего байта в буфер
-			if (BUFFER_USART[received_bytes] == '!') break;		// конечный символ на случай если нужно принять менее 256 байт
-			received_bytes++;
-		}
+		// RXNE поднят, прием байт
+		USART_Receive(USART3, BUFFER_USART, '!');
+
 
 		// фильтрация буфера и занесение команд в очередь
 		AD9833_filter_Buffer_USART(BUFFER_USART, BUFFER_USART_FILTERED);
 		AD9833_Parse_Commands_From_Buffer_USART(BUFFER_USART_FILTERED);
-    }
+	}
 }
+
+/* Мигание светодиодов и обработка нажатий кнопки (добавить в основной цикл)
+
+    uint32_t start = get_current_ms();       			// Момент отсчета времени для основного цикла
+    while (1)
+    {
+        if (is_time_passed_ms(start, time_delay))		// Первая половина цикла: светодиоды выключены
+        {
+			LED_turnOFF_4_LED();
+        }
+
+        if (is_time_passed_ms(start, time_delay * 2))	// Вторая половина цикла: светодиоды включаются в соответствии с выбранным режимом
+        {
+			switch (blink_mode)
+            {
+                case 0: GPIO_set_HIGH(GPIOD, 12);   break;
+                case 1: GPIO_set_HIGH(GPIOD, 13);   break;
+                case 2: GPIO_set_HIGH(GPIOD, 14);   break;
+            }
+			start = get_current_ms();
+        }
+    }
+*/

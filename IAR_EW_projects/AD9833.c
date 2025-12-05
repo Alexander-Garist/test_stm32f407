@@ -182,7 +182,7 @@ void AD9833_filter_Buffer_USART(char* original_buffer, char* filtered_buffer)
     uint32_t BUFFER_SIZE = 0;
 
 	// Проверяется каждый полученный байт, является он цифрой или символом-разделителем
-    for (int i = 0; i < strlen(original_buffer); i++)
+    for (int i = 0; original_buffer[i] != '!'; i++)
     {
         if ((original_buffer[i] >= '0') && (original_buffer[i] <= ';'))
         {
@@ -190,7 +190,9 @@ void AD9833_filter_Buffer_USART(char* original_buffer, char* filtered_buffer)
             BUFFER_SIZE++;
         }
     }
-    filtered_buffer[BUFFER_SIZE] = '\0';	// Отфильтрованный от мусора буфер заканчивается '\0' т.к. он может быть короче исходного
+
+	// Отфильтрованный от мусора буфер заканчивается '\0' т.к. он может быть короче исходного
+    filtered_buffer[BUFFER_SIZE] = '\0';
 
     // Исходный буфер очищается после того, как из него скопировали данные
     USART_clear_Buffer(original_buffer);
@@ -302,13 +304,13 @@ void AD9833_Execute_Command(USART_TypeDef* USARTx, Signal_Parameters* signal_par
     //else printf("ERROR: Wave_form not changed\n\n");
 
 	// Отправка выполненной команды обратно по USART с добавкой строки "Command executed: " и добавкой символов '\r' '\n'
-	USART_Send_String(USARTx, "Command executed: ");
+
+	USART_Transmit(USARTx, "Command executed: ", strlen("Command executed: "));
 	for (int i = 0; i < strlen(USART_Commands[0]); i++)
 	{
-		USART_Send_Char(USARTx, USART_Commands[0][i]);
+		USART_Transmit(USARTx, &USART_Commands[0][i], 1);
 	}
-	USART_Send_Char(USARTx, '\r');
-	USART_Send_Char(USARTx, '\n');
+	USART_Transmit(USARTx, "\r\n", 2);
 
 /**** Вывод в терминал для отладки. Закомментированные строки кода раскомментировать при необходимости отладки. *******/
 
@@ -328,6 +330,13 @@ void AD9833_Execute_Command(USART_TypeDef* USARTx, Signal_Parameters* signal_par
     }
     Amount_of_Commands--;	// Количество команд в очереди уменьшается
 
+	if (!Amount_of_Commands)	// если заклнчились все команды в очереди, очередь нужно очистить полностью
+	{
+		for (int i = 0; i < MAX_COMMANDS; i++)
+		{
+			USART_Commands[i][0] = '\0';
+		}
+	}
 	// Вывод актуальной очереди команд после удаления только что удаленной
     //AD9833_Print_List_of_Commands();
 }
