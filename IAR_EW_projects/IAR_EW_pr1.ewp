@@ -2151,6 +2151,9 @@
             <name>$PROJ_DIR$\i2c.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\segment_indicator.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\spi.h</name>
         </file>
         <file>
@@ -2179,6 +2182,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\i2c.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\segment_indicator.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\spi.c</name>

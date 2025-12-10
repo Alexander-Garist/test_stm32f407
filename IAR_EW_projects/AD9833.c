@@ -310,7 +310,8 @@ void AD9833_Execute_Command(USART_TypeDef* USARTx, Signal_Parameters* signal_par
 	{
 		USART_Transmit(USARTx, &USART_Commands[0][i], 1);
 	}
-	USART_Transmit(USARTx, "\r\n", 2);
+	USART_Transmit(USARTx, "\n", 1);
+	//USART_Transmit(USARTx, "\r\n", 2);
 
 /**** Вывод в терминал для отладки. Закомментированные строки кода раскомментировать при необходимости отладки. *******/
 
