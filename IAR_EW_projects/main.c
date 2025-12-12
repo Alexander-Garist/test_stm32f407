@@ -18,6 +18,8 @@
 #include "AD9833.h"
 #include "usart.h"
 
+#include "7_segment_indicator.h"
+
 /** Defines ***********************************************************************************************************/
 
 /** Период моргания светодиодов в 3 режимах ***************************************************************************/
@@ -184,7 +186,7 @@ int main()
 	Signal_Parameters Output_Signal;
 	Output_Signal.frequency = 1000;
 	Output_Signal.amplitude = 128;
-	Output_Signal.wave_form = 0;
+	Output_Signal.wave_form = 2;
 
 	// Включение генератора AD9833, выходной сигнал имеет параметры 1 кГц, 50% амплитуда, синусоида
 	AD9833_Module_Init(SPI1, &Output_Signal);
@@ -218,9 +220,9 @@ int main()
 			{
 				switch (blink_mode)
 				{
-					case 0: GPIO_set_HIGH(GPIOD, 12);   break;
-					case 1: GPIO_set_HIGH(GPIOD, 13);   break;
-					case 2: GPIO_set_HIGH(GPIOD, 14);   break;
+					case 0: GPIO_set_HIGH(GPIOD, 12);	Seven_Segment_Indicate_Number(123);	break;
+					case 1: GPIO_set_HIGH(GPIOD, 13);   Seven_Segment_Indicate_Number(456);	break;
+					case 2: GPIO_set_HIGH(GPIOD, 14);   Seven_Segment_Indicate_Number(789);	break;
 				}
 				start = get_current_ms();
 			}
