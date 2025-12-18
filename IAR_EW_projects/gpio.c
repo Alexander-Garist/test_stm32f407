@@ -133,6 +133,7 @@ void GPIO_Enable_SPI(SPI_TypeDef* SPIx, GPIO_TypeDef* GPIO_port, int GPIO_pin)
 }
 
 // Инициализация GPIO в режиме USART/UART
+// Важный момент - приемник подтянуть к питанию, чтобы защититься от помех и случайных срабатываний приемника
 void GPIO_Enable_USART(USART_TypeDef* USARTx, GPIO_TypeDef* GPIO_port_Tx, GPIO_TypeDef* GPIO_port_Rx, int GPIO_pin_Tx, int GPIO_pin_Rx)
 {
 	// Включение тактирования портов Tx Rx
@@ -174,4 +175,6 @@ void GPIO_Enable_USART(USART_TypeDef* USARTx, GPIO_TypeDef* GPIO_port_Tx, GPIO_T
 		GPIO_init_AF_Mode(GPIO_port_Rx, GPIO_pin_Rx, 8);
 		break;
 	}
+
+	GPIO_port_Rx->PUPDR |= (0x1 << (GPIO_pin_Rx * 2));
 }

@@ -62,4 +62,9 @@ void EXTI_Disable_Pin(
 */
 void EXTI_Clear_Flag(uint32_t EXTI_pin);
 
+/** Обработчики прерываний EXTI (для обработки внешних прерываний на выводах 0-15 нужны обработчики EXTIx_IRQHandler) */
+
+// Обработчик внешнего прерывания на выводах Px0, где x => GPIOx
+void EXTI0_IRQHandler(void);
+
 #endif /*__EXTI_H__ */

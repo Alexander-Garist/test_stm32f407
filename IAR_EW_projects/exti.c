@@ -6,6 +6,11 @@
 /** Includes **********************************************************************************************************/
 #include "exti.h"
 #include "CMSIS/stm32f4xx.h"
+#include "gpio.h"
+#include "LED.h"
+#include "systick.h"
+
+#include "button.h"
 
 /********************** Статические функции ***************************************************************************/
 
@@ -142,4 +147,20 @@ void EXTI_Disable_Pin(EXTI_Port EXTI_port, uint32_t EXTI_pin)
 void EXTI_Clear_Flag(uint32_t EXTI_pin)
 {
     EXTI->PR = (1 << EXTI_pin);
+}
+
+
+// Обработчик внешнего прерывания на выводах Px0, где x => GPIOx
+void EXTI0_IRQHandler(void)
+{
+    GPIO_set_HIGH(GPIOD, 15);								// Индикация нажатия кнопки синим светодиодом
+	delay_ms(100);
+    uint32_t current_time = get_current_ms();				// Момент времени начала обработки прерывания
+    if (current_time - button_last_time > DEBOUNCE_TIME)
+    {
+        LED_change_blink_mode(LED_Set_Blink_Period);					// Логика нажатия на кнопку - смена режима
+		button_last_time = get_current_ms();				// Обновить время последнего нажатия
+    }
+    EXTI_Clear_Flag(0);										// Сброс флага для выхода из прерывания
+    LED_turnOFF_4_LED();									// Выключение всех светодиодов
 }

@@ -45,7 +45,7 @@ static void USART_Init(USART_TypeDef* USARTx, uint32_t baudrate)
 		case ((uint32_t)USART6):	USARTx->BRR = freq_APB2 / baudrate; 	break;
 	}
 
-	// Включение USARTx: TX, RX и прерывание по приему
+	// Включение USARTx: TX, RX
     USARTx->CR1 = USART_CR1_TE 			// Transmitter enable
 				| USART_CR1_RE;			// Receiver enable
 

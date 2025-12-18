@@ -2142,6 +2142,9 @@
             <name>$PROJ_DIR$\BL24CM1A.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\button.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\exti.h</name>
         </file>
         <file>
@@ -2152,6 +2155,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\i2c.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\LED.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\spi.h</name>
@@ -2175,6 +2181,9 @@
             <name>$PROJ_DIR$\BL24CM1A.c</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\button.c</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\exti.c</name>
         </file>
         <file>
@@ -2185,6 +2194,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\i2c.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\LED.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\spi.c</name>
