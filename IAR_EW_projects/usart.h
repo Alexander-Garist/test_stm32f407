@@ -13,6 +13,21 @@
 /** Defines ***********************************************************************************************************/
 #define MAX_BUFFER_SIZE 256
 
+// Типичные скорости приема/передачи по USART
+typedef enum
+{
+	BRR_2400	= 2400,
+	BRR_9600	= 9600,
+	BRR_19200	= 19200,
+	BRR_57600	= 57600,
+	BRR_115200	= 115200,
+	BRR_230400	= 230400,
+	BRR_460800	= 460800,
+	BRR_921600	= 921600,
+	BRR_2250000	= 2250000,
+	BRR_4500000	= 4500000
+}USART_Baudrate_t;
+
 /***************************** Структура для инициализации модуля USART ***********************************************/
 
 	/**
@@ -22,9 +37,9 @@ typedef struct
 {
 	USART_TypeDef*	USARTx;			// Модуль UART/USART (USART1 / USART2 / USART3 / UART 4 / UART5 / USART6)
 	GPIO_TypeDef*	GPIO_port_Tx;	// Порт передатчика (GPIOA / GPIOB / ...)
-	int				GPIO_pin_Tx;	// Пин передатчика
+	int				GPIO_pin_Tx;	// Пин передатчика (0-15)
 	GPIO_TypeDef*	GPIO_port_Rx;	// Порт приемника (GPIOA / GPIOB / ...)
-	int				GPIO_pin_Rx;	// Пин приемника
+	int				GPIO_pin_Rx;	// Пин приемника (0-15)
 	uint32_t		baudrate;		// Скорость обмена данными бит/с
 }USART_Init_Struct;
 
@@ -59,24 +74,45 @@ void USART_EnableIRQ(USART_TypeDef*	USARTx,	uint32_t priority);
 	*/
 void USART_DisableIRQ(USART_TypeDef* USARTx);
 
-/******************* прием/передача **********************/
+/******************* Прием/передача **********************/
 
-USART_Status_t USART_Transmit(USART_TypeDef* USARTx, char* data, uint32_t size);
-USART_Status_t USART_Receive(USART_TypeDef* USARTx, char* buffer, char STOP_BYTE);
+	/**
+	! Передача данных по UART/USART
+	- USARTx - выбранный модуль UART/USART.
+	- data - указатель на массив символьных данных для передачи.
+	- size - количество передаваемых байт.
+	*/
+USART_Status_t USART_Transmit(
+	USART_TypeDef*	USARTx,
+	char*			data,
+	uint32_t		size
+);
 
-
-
-
-// Функции приема
-void USART_Receive_Char(USART_TypeDef* USARTx, char* symbol);
-
+	/**
+	! Прием данных по UART/USART.
+	- USARTx - выбранный модуль UART/USART.
+	- buffer - указатель на буфер приемника.
+	- STOP_BYTE - стоповый байт, который прекращает прием данных
+	*/
+USART_Status_t USART_Receive(
+	USART_TypeDef*	USARTx,
+	char*			buffer,
+	char			STOP_BYTE
+);
 
 /** эти функции добавились для управления генератором сигналов через USART */
 
-// Вывести текущее содержимое буфера
+	/**
+	! Вывод в терминал текущего содержимого буфера.
+	- buffer - указатель на буфер приемника.
+	- buffer_size - размер буфера.
+	*/
 void USART_print_Buffer(char* buffer, uint32_t buffer_size);
 
-// Очистить буфер
+	/**
+	! Очистка буфера.
+	- buffer - указатель на буфер приемника.
+	*/
 void USART_clear_Buffer(char* buffer);
 
 /****************************** Обработчики прерываний UART/USART *****************************************************/

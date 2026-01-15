@@ -66,8 +66,8 @@ void USART_Enable(USART_Init_Struct* Init_Struct)
 	GPIO_Enable_USART(
 		Init_Struct->USARTx,
 		Init_Struct->GPIO_port_Tx,
-		Init_Struct->GPIO_port_Rx,
 		Init_Struct->GPIO_pin_Tx,
+		Init_Struct->GPIO_port_Rx,
 		Init_Struct->GPIO_pin_Rx
 	);
 
@@ -117,7 +117,7 @@ void USART_EnableIRQ(USART_TypeDef* USARTx, uint32_t priority)
 // Запрет обработки прерываний USART
 void USART_DisableIRQ(USART_TypeDef* USARTx)
 {
-	// Разрешение прерываний по приемнику (обработчик прерывания модуля USARTx вызывается если приемник не пустой)
+	// Запрет прерываний по приемнику (обработчик прерывания модуля USARTx вызывается если приемник не пустой)
 	USARTx->CR1 &= ~USART_CR1_RXNEIE;
 
     switch((uint32_t)USARTx) {
@@ -164,7 +164,8 @@ USART_Status_t USART_Receive(USART_TypeDef* USARTx, char* buffer, char STOP_BYTE
 	return USART_OK;
 }
 
-/**********************************************************************************************************************/
+/***************************** Отладочные функции *********************************************************************/
+
 // Вывести текущее содержимое буфера USART
 void USART_print_Buffer(char* buffer, uint32_t buffer_size)
 {
@@ -182,7 +183,8 @@ void USART_clear_Buffer(char* buffer)
 }
 
 /***************************************** Обработчики прерываний *****************************************************/
-// сделать нормальный обработчик прерывания USART3
+
+// TODO: сделать нормальный обработчик прерывания USART3
 void USART3_IRQHandler(void)
 {
 

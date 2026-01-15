@@ -154,11 +154,11 @@ void EXTI_Clear_Flag(uint32_t EXTI_pin)
 void EXTI0_IRQHandler(void)
 {
     GPIO_set_HIGH(GPIOD, 15);								// Индикация нажатия кнопки синим светодиодом
-	delay_ms(100);
+	//delay_ms(100);
     uint32_t current_time = get_current_ms();				// Момент времени начала обработки прерывания
     if (current_time - button_last_time > DEBOUNCE_TIME)
     {
-        LED_change_blink_mode(LED_Set_Blink_Period);					// Логика нажатия на кнопку - смена режима
+        LED_change_blink_mode(LED_Set_Blink_Period);		// Логика нажатия на кнопку - смена режима
 		button_last_time = get_current_ms();				// Обновить время последнего нажатия
     }
     EXTI_Clear_Flag(0);										// Сброс флага для выхода из прерывания

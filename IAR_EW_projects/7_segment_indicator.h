@@ -19,12 +19,12 @@
 			2. Определить GPIO порты и пины всех управляющих выводов через #define
 			3. Добавить все новые управляющие выводы в массив структур Ctrl_Pins_Array
 */
-#define CTRL_0_Port		GPIOC
-#define CTRL_0_Pin		15
-#define CTRL_1_Port		GPIOC
-#define CTRL_1_Pin		14
-#define CTRL_2_Port		GPIOE
-#define CTRL_2_Pin		6
+#define CTRL_0_PORT		GPIOC
+#define CTRL_0_PIN		15
+#define CTRL_1_PORT		GPIOC
+#define CTRL_1_PIN		14
+#define CTRL_2_PORT		GPIOE
+#define CTRL_2_PIN		6
 
 // Раскомментировать для добавления портов управления
 /*
@@ -41,30 +41,30 @@ typedef struct
 
 // Массив структур управляющих выводов (нужен для удобного перебора с помощью цикла всех управляющих выводов индикатора)
 static Control_Pins_t Ctrl_Pins_Array[CTRL_PINS_NUMBER] = {
-	{CTRL_0_Port, CTRL_0_Pin},
-	{CTRL_1_Port, CTRL_1_Pin},
-	{CTRL_2_Port, CTRL_2_Pin}
+	{CTRL_0_PORT, CTRL_0_PIN},
+	{CTRL_1_PORT, CTRL_1_PIN},
+	{CTRL_2_PORT, CTRL_2_PIN}
 	// {CTRL_3_Port, CTRL_3_Pin} Раскомментировать для добавления портов управления
 };
 
 /********* Выводы для включения конкретного сегмента (установить HIGH чтобы включился нужный сегмент). ****************/
-#define segmentA_Port	GPIOE		// Сегмент A	PE4
-#define segmentA_Pin	4
-#define segmentB_Port	GPIOE		// Сегмент B	PE2
-#define segmentB_Pin	2
-#define segmentC_Port	GPIOE		// Сегмент C	PE0
-#define segmentC_Pin	0
-#define segmentD_Port	GPIOC		// Сегмент D	PC13
-#define segmentD_Pin	13
-#define segmentE_Port	GPIOE		// Сегмент E	PE5
-#define segmentE_Pin	5
-#define segmentF_Port	GPIOE		// Сегмент F	PE3
-#define segmentF_Pin	3
-#define segmentG_Port	GPIOE		// Сегмент G	PE1
-#define segmentG_Pin	1
+#define SEGMENT_A_PORT	GPIOE		// Сегмент A	PE4
+#define SEGMENT_A_PIN	4
+#define SEGMENT_B_PORT	GPIOE		// Сегмент B	PE2
+#define SEGMENT_B_PIN	2
+#define SEGMENT_C_PORT	GPIOE		// Сегмент C	PE0
+#define SEGMENT_C_PIN	0
+#define SEGMENT_D_PORT	GPIOC		// Сегмент D	PC13
+#define SEGMENT_D_PIN	13
+#define SEGMENT_E_PORT	GPIOE		// Сегмент E	PE5
+#define SEGMENT_E_PIN	5
+#define SEGMENT_F_PORT	GPIOE		// Сегмент F	PE3
+#define SEGMENT_F_PIN	3
+#define SEGMENT_G_PORT	GPIOE		// Сегмент G	PE1
+#define SEGMENT_G_PIN	1
 
-#define Refresh_Period					10		// Максимальный период обновления индикации (мс)
-#define Running_Str_Period				500		// Период сдвига бегущей строки (мс)
+#define REFRESH_PERIOD					10		// Максимальный период обновления индикации (мс)
+#define RUNNING_STR_PERIOD				1000		// Период сдвига бегущей строки (мс)
 
 /******************************************** Переменные **************************************************************/
 

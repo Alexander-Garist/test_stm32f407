@@ -2131,6 +2131,9 @@
         </file>
     </group>
     <group>
+        <name>FreeRTOS</name>
+    </group>
+    <group>
         <name>inc</name>
         <file>
             <name>$PROJ_DIR$\7_segment_indicator.h</name>

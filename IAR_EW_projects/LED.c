@@ -7,18 +7,15 @@ uint32_t Blink_Period = TIME_SHORT;		// Период моргания свето
 uint32_t Green_Blinks_Counter = 0;
 uint32_t Orange_Blinks_Counter = 0;
 uint32_t Red_Blinks_Counter = 0;
+uint32_t Blue_Blinks_Counter = 0;
 
 uint32_t Blink_Mode = 0;
 
-	/**
-	! callback функция для установки частоты моргания.
-	- time - требуемый период моргания светоиодов.
-	*/
+// callback функция для установки частоты моргания
 void LED_Set_Blink_Period(uint32_t time)
 {
     Blink_Period = time;
 }
-
 
 	/**
 	! Функция изменения режима моргания, вызывается в обработчике внешнего прерывания EXTI0_IRQHandler.
@@ -39,10 +36,10 @@ void LED_change_blink_mode(void (*callback)(uint32_t))
 	*/
 void LED_turnON_4_LED(void)
 {
-    GPIO_set_HIGH(GPIO_Port_LED_0, GPIO_Pin_LED_0);
-    GPIO_set_HIGH(GPIO_Port_LED_1, GPIO_Pin_LED_1);
-    GPIO_set_HIGH(GPIO_Port_LED_2, GPIO_Pin_LED_2);
-    GPIO_set_HIGH(GPIO_Port_LED_3, GPIO_Pin_LED_3);
+    GPIO_set_HIGH(GPIO_PORT_LED_0, GPIO_PIN_LED_0);
+    GPIO_set_HIGH(GPIO_PORT_LED_1, GPIO_PIN_LED_1);
+    GPIO_set_HIGH(GPIO_PORT_LED_2, GPIO_PIN_LED_2);
+    GPIO_set_HIGH(GPIO_PORT_LED_3, GPIO_PIN_LED_3);
 }
 
 	/**
@@ -50,8 +47,8 @@ void LED_turnON_4_LED(void)
 	*/
 void LED_turnOFF_4_LED(void)
 {
-    GPIO_set_LOW(GPIO_Port_LED_0, GPIO_Pin_LED_0);
-    GPIO_set_LOW(GPIO_Port_LED_1, GPIO_Pin_LED_1);
-    GPIO_set_LOW(GPIO_Port_LED_2, GPIO_Pin_LED_2);
-    GPIO_set_LOW(GPIO_Port_LED_3, GPIO_Pin_LED_3);
+    GPIO_set_LOW(GPIO_PORT_LED_0, GPIO_PIN_LED_0);
+    GPIO_set_LOW(GPIO_PORT_LED_1, GPIO_PIN_LED_1);
+    GPIO_set_LOW(GPIO_PORT_LED_2, GPIO_PIN_LED_2);
+    GPIO_set_LOW(GPIO_PORT_LED_3, GPIO_PIN_LED_3);
 }

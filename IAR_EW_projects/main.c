@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
 #include "CMSIS/stm32f4xx.h"
 #include "systick.h"
 #include "gpio.h"
@@ -22,6 +23,18 @@
 #include "LED.h"
 #include "button.h"
 
+
+// Задачи получают только период, с которым они должны выполняться
+
+void Task_LED_1(uint32_t TASK_period);	// Задача моргания LED_1
+void Task_LED_2(uint32_t TASK_period);	// Задача моргания LED_2
+void Task_LED_3(uint32_t TASK_period);	// Задача моргания LED_3
+void Task_LED_4(uint32_t TASK_period);	// Задача моргания LED_4
+
+void AD9833_ExecuteCommand_Task(Signal_Parameters* out_signal, uint32_t TASK_period);	// Задача AD9833 по выполнению команд
+void AD9833_GetCommand_Task(char* buffer, char* filtered_buffer);						// Задача AD9833 по парсингу команд из буфера USART
+void Indicator_Task(uint32_t TASK_period);												// Задача индикатора
+void LED_Blink_Task(uint32_t TASK_period);												// Задача LED
 
 int main()
 {
@@ -56,16 +69,14 @@ int main()
 
 	/** Настройка модуля USART3 и инициализация портов GPIO в режиме альтернативной функции USART *********************/
 
-	// Объявление структуры инициализации USART3
+	// Объявление структуры инициализации USART3 и заполнение ее полей
 	USART_Init_Struct Init_USART3;
-
-	// Заполнение полей структуры инициализации
 	Init_USART3.USARTx = USART3;
 	Init_USART3.GPIO_port_Tx = GPIOB;
 	Init_USART3.GPIO_pin_Tx = 10;
 	Init_USART3.GPIO_port_Rx = GPIOB;
 	Init_USART3.GPIO_pin_Rx = 11;
-	Init_USART3.baudrate = 115200;
+	Init_USART3.baudrate = BRR_115200;
 
 	// Включение модуля USART3 с использованием структуры инициализации
 	USART_Enable(&Init_USART3);
@@ -73,11 +84,11 @@ int main()
 	/** Настройка модуля AD9833, инициализация используемых портов GPIO ***********************************************/
 
 	/** Схема подключения AD9833 к STM32F407:
-		Вывод AD9833	Цвет провода		Вывод STM32F407
-		CS	---------> оранжевый	-----> PA4 (output)
-		FSY ---------> белый		-----> PA3 (output)
-		CLK ---------> черный		-----> PA5 (SPI1_SCK)
-		DAT ---------> фиолетовый	-----> PA7 (SPI1_MOSI)
+		Вывод AD9833	Вывод STM32F407
+		CS	----------> PA4 (output)
+		FSY ----------> PA3 (output)
+		CLK ----------> PA5 (SPI1_SCK)
+		DAT ----------> PA7 (SPI1_MOSI)
 	*/
 
 	GPIO_Enable_SPI(SPI1, GPIOA, 5);	// Определение PA5 как SPI1_SCK
@@ -103,272 +114,317 @@ int main()
 	// Включение генератора AD9833, выходной сигнал имеет параметры 1 кГц, 50% амплитуда, синусоида
 	AD9833_Module_Init(SPI1, &Output_Signal);
 
-	char BUFFER_USART[MAX_BUFFER_SIZE];				// строка, хранящая буфер USART, т.е. еще не отфильтрованный от мусора
+	char BUFFER_USART[MAX_BUFFER_SIZE];				// строка, хранящая еще не отфильтрованный от возможного мусора буфер USART
 	char BUFFER_USART_FILTERED[MAX_BUFFER_SIZE];	// отфильтрованный буфер USART
 
 	/** Проверка работоспособности модуля SPI2 (подключен модуль памяти) **********************************************/
-
-	uint8_t unique_id[8];
-    FM25Q08B_Read_Unique_ID(SPI2, unique_id);
-/*
-    printf("Unique chip ID: ");
-    for(int i = 0; i < 8; i++)
-    {
-    printf("%02X",unique_id[i]);
-	}
-    printf("\n");
-
-    uint32_t jedec_id = FM25Q08B_Read_JEDEC_ID(SPI2);
-    printf("JEDEC ID: %06X\n",jedec_id);
-
-    uint16_t manufacturer_device_ID = FM25Q08B_Read_Manufacturer_ID(SPI2);
-    printf("Manufacturer/Device ID: %04X\n", manufacturer_device_ID);
-*/
-
-    //uint8_t transmitted_data[FLASH_PAGE_SIZE];
-    uint8_t received_data[FLASH_PAGE_SIZE];
-
-    for (uint16_t i = 0; i < FLASH_PAGE_SIZE; i++)
-    {
-        received_data[i] = 55;  // Изначально в received_data мусор
-    }
-
     /** Проверка чтения **********/
-
-	    FM25Q08B_Status_t reception_status, transmission_status, erasion_status;
-    reception_status = FM25Q08B_Read(
-		SPI2,
-		FLASH_START_ADDRESS,	// Адрес памяти модуля памяти, с которого начинается чтение
-		received_data,			// Указатель на массив данных, в который записываются считанные данные
-		FLASH_PAGE_SIZE			// Количество считанных байт
-	);
-    if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
-/*
-	printf("Проверка чтения\n");
-	for (uint32_t i = 0; i < 10; i++)
-	{
-		printf("received_data[%d] = 0x%02X\n", i, received_data[i]);
-	}
-*/
-
 	/** Проверка стирания памяти */
-
-	erasion_status = FM25Q08B_Chip_Erase(SPI2);
-    if (erasion_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 13);
-
-    reception_status = FM25Q08B_Read(
-		SPI2,
-		FLASH_START_ADDRESS,	// Адрес памяти модуля памяти, с которого начинается чтение
-		received_data, 			// Указатель на массив данных, в который записываются считанные данные
-		FLASH_PAGE_SIZE			// Количество считанных байт
-	);
-    if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
-/*
-	printf("Проверка стирания памяти\n");
-	for (uint32_t i = 0; i < 10; i++)
-	{
-		printf("received_data[%d] = 0x%02X\n", i, received_data[i]);
-	}
-*/
-
     /** Проверка записи и чтения */
-
-	//printf("Проверка записи\n");
-
-	uint8_t transmitted_data_test[FLASH_PAGE_SIZE];
-	uint8_t received_data_test[FLASH_PAGE_SIZE];
-
-	// Одна страница 256 байт (0x100)
-	uint32_t page_addr_offset = 0x100;
-
-	/** В цикле заполняется массив отправляемых данных 256 байт (1 страница),
-		отправляется и считываются данные в массив принятых данных.
-		Каждая следующая страница имеет свой начальный адрес, поэтому в функциях FM25Q08B_Write и FM25Q08B_Read
-		начальный адрес памяти вычисляется по формуле:
-		page_address = flash_start_address + page_number * page_addr_offset
-		где page_address - начальный адрес страницы
-			flash_start_address - начальный адрес памяти (0x000000)
-			page_number - номер текущей страницы (0 - 4095)
-			page_addr_offset - объем одной страницы (256 байт == 0x100)
-	*/
-	for(uint16_t page_number = 0; page_number < 4096; page_number++)
-	{
-		// Заполнение массива отправляемых данных
-		for(uint16_t i = 0; i < FLASH_PAGE_SIZE; i++)
-		{
-			transmitted_data_test[i] = page_number;
-		}
-
-		transmission_status = FM25Q08B_Write(
-			SPI2,
-			FLASH_START_ADDRESS + page_addr_offset * page_number,	// Адрес памяти модуля памяти, с которого начинается запись
-			transmitted_data_test,									// Указатель на массив данных, которые записываются в память
-			FLASH_PAGE_SIZE											// Количество записанных байт
-		);
-		if (transmission_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 15);
-
-		reception_status = FM25Q08B_Read(
-			SPI2,
-			FLASH_START_ADDRESS + page_addr_offset * page_number,	// Адрес памяти модуля памяти, с которого начинается чтение
-			received_data_test,										// Указатель на массив данных, в который записываются считанные данные
-			FLASH_PAGE_SIZE											// Количество считанных байт
-		);
-		if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
-/*
-		printf("Номер страницы: %d\n", page_number);
-		for (uint8_t i = 0; i < 3; i++)
-		{
-			printf("received_data[%d] = 0x%02X\n", i, received_data_test[i]);
-		}
-		printf("\n");
-*/
-	}
-    delay_ms(1000);
-    LED_turnOFF_4_LED();
-
-	// Если есть ошибки - загорится красный светодиод
-    if ((reception_status != FM25Q08B_OK)
-		|| (transmission_status != FM25Q08B_OK)
-		|| (erasion_status != FM25Q08B_OK))
-	{
-		GPIO_set_HIGH(GPIOD, 14);
-	}
-    delay_ms(1000);
-
     /** Проверка работоспособности модуля I2C1 (подключен модуль памяти) **********************************************/
 
-	uint8_t Received_Data[length_Received_Data] = { 0 };
-
-	// Попытки подключиться к EEPROM
-    uint8_t Error_Counter = 0;
-    while (Error_Counter < MAX_NUMBER_ATTEMPTS_CONNECT_EEPROM)
-    {
-        if (I2C_is_Device_Ready(I2C1, EEPROM_ADDRESS) == I2C_OK)		// Получилось подключиться => запись/чтение и выход из попыток
-        {
-            GPIO_set_HIGH(GPIOD, 15);   delay_ms(150);					// Синий моргнул - EEPROM готова
-            GPIO_set_LOW(GPIOD, 15);    delay_ms(150);
-
-            // Передача данных порциями по 4096 байт в цикле
-            for (uint32_t counter = 0; counter < length_All_Data / 2; counter += data_2_byte_SIZE)
-            {
-                // Заполнить массив передаваемых данных
-                for (uint32_t i = 0; i < data_2_byte_SIZE; i++)	// 2048 * 2-byte
-                {
-                    data_2_byte[i] = i + counter;
-                }
-                uint8_t* Transmitted_Data = (uint8_t*)data_2_byte;				// 2-байтные данные должны отправляться как однобайтные
-                uint32_t Transmission_ADDRESS = START_ADDRESS + counter * 2;    // Адрес отправки одной порции данных
-
-                I2C_Status_t status_Transmission = BL24CM1A_Write(I2C1, EEPROM_ADDRESS, Transmission_ADDRESS, Transmitted_Data, length_Transmitted_Data);
-            }
-            LED_turnON_4_LED();
-            delay_ms(500);
-            LED_turnOFF_4_LED();
-
-            // Записать 2 страницы по 256 байт буквами с адреса 0x180 по адрес 0x380
-            uint8_t Transmitted_Data[send_SIZE];
-            for (uint16_t i = 0; i < send_SIZE; i++)
-            {
-                Transmitted_Data[i] = 0x4A;
-            }
-
-            I2C_Status_t status_Transmission = BL24CM1A_Write(I2C1, EEPROM_ADDRESS, 0x180, Transmitted_Data, send_SIZE);
-
-            if (status_Transmission != I2C_OK) GPIO_set_HIGH(GPIOD, 14);
-
-            // Прием данных порциями по 4096 байт в цикле
-            for (uint32_t counter = 0; counter < length_All_Data / 2; counter += data_2_byte_SIZE)
-            {
-                uint32_t Reception_ADDRESS = START_ADDRESS + counter * 2;       //Адрес чтения одной порции данных
-
-                I2C_Status_t status_Reception = BL24CM1A_Read(I2C1, EEPROM_ADDRESS, Reception_ADDRESS, Received_Data, length_Received_Data);
-                if (status_Reception == I2C_OK) GPIO_set_HIGH(GPIOD, 15);
-                else GPIO_set_HIGH(GPIOD, 14);
-
-                // Вывести номер операции чтения
-                //printf("\nПрочитано 4096 байт, блок %d\n", counter / 2048);
-                // Вывести первые 10 байт
-/*				for (int i = 0; i < length_Received_Data; i++)
-                {
-                    if (i % 32 == 0) printf("\n");
-                    printf("%02X ", Received_Data[i]);
-                }
-*/
-            }
-            GPIO_set_HIGH(GPIOD, 13);   // Загорелся оранжевый - чтение окончено
-            break;						// Чтение/запись выполнены, выход из цикла попыток подключиться
-        }
-        if (I2C_is_Device_Ready(I2C1, EEPROM_ADDRESS) != I2C_OK)		// Не получилось подключиться за 10 попыток => выйти из цикла попыток и перейти к основному циклу
-        {
-            GPIO_set_HIGH(GPIOD, 14);   delay_ms(300);					// Красный моргнул - EEPROM не готова
-            GPIO_set_LOW(GPIOD, 14);    delay_ms(300);
-            Error_Counter++;
-        }
-    }
-
-	/** Проверка работоспособности модуля семисегментного индикатора **************************************************/
-
     /**************** Основной цикл: мигание светодиодов и обработка нажатий кнопки ***********************************/
-	/** Основной цикл теперь будет содержать не только моргание светодиодами и обработку нажатий кнопки, но и прием/передачу команд для генератора сигналов через USART */
-
-	uint32_t start = get_current_ms();       			// Момент отсчета времени для основного цикла
-	Last_Refresh_Time = get_current_ms();
-
-
+	/** Основной цикл теперь будет содержать не только моргание светодиодами и обработку нажатий кнопки,
+		но и прием/передачу команд для генератора сигналов через USART */
 	while (1)
 	{
-		// пока флаг RXNE не поднят это означает что ничего еще не пришло по USART, значит проверяем есть ли команды в очереди
-		// если же RXNE поднят, значит нужно принять байты из USART
+		// Пока ничего не пришло по USART выполняются задачи индикатора, LED и AD9833 по выполнению команд
 		while (!(USART3->SR & USART_SR_RXNE))
 		{
-			if (is_time_passed_ms(Last_Refresh_Time, Refresh_Period))	// отображение числа на индикаторе вызывается каждую 1 мс
-			{
-				switch (Blink_Mode)
-				{
-					case 0: Seven_Segment_Indicate_Number(Green_Blinks_Counter);	break;
-					case 1: Seven_Segment_Indicate_Number(123456789);				break;
-					case 2: Seven_Segment_Indicate_String("ABCDEFGH1234567890");	break;
-				}
-			}
+			Indicator_Task(REFRESH_PERIOD);						// Задача индикатора должна выполняться каждые 10 мс
+			LED_Blink_Task(Blink_Period);						// Задача моргания LED должна выполняться каждые 100/200/500 мс
+			AD9833_ExecuteCommand_Task(&Output_Signal, 100);	// Каждые 100 мс проверяется, есть ли что-то в очереди команд AD9833
+		}
 
-			// Программа выйдет из этого блока только если что-то придет в приемник USART
-			if (is_time_passed_ms(start, Blink_Period))		// Первая половина цикла: светодиоды выключены
-			{
-				LED_turnOFF_4_LED();
-			}
+		// Если что-то пришло в буфер USART выполнить задачи USART и AD9833 по парсингу новых команд
+		USART_Receive(USART3, BUFFER_USART, '!');
+		AD9833_GetCommand_Task(BUFFER_USART, BUFFER_USART_FILTERED);
+	}
+}
 
-			if (is_time_passed_ms(start, Blink_Period * 2))	// Вторая половина цикла: светодиоды включаются в соответствии с выбранным режимом
+/*************************************************************************************************************************/
+
+// Задача AD9833 по выполнению команд из очереди
+void AD9833_ExecuteCommand_Task(Signal_Parameters* out_signal, uint32_t TASK_period)
+{
+	static uint8_t TASK_state;					// Состояние задачи
+	static uint32_t TASK_last_execution_time;	// Момент последнего выполнения задачи
+
+	if (is_time_passed_ms(TASK_last_execution_time, TASK_period)) TASK_state = 1;
+	else TASK_state = 0;
+
+	switch (TASK_state)
+	{
+		case 0: return;
+		case 1:
+		{
+			while (Amount_of_Commands)	// выполнить все команды генератора сигналов, какие есть в очереди
 			{
+				AD9833_Execute_Command(USART3, out_signal);	// после выполнения команды отправить команду обратно отправителю
+				AD9833_Module_Init(SPI1, out_signal);
+			}
+			TASK_last_execution_time = get_current_ms();
+		}
+	}
+}
+
+// Задача AD9833 по парсингу команд из буфера USART
+void AD9833_GetCommand_Task(char* buffer, char* filtered_buffer)
+{
+	// Фильтрация буфера и занесение команд в очередь
+	AD9833_filter_Buffer_USART(buffer, filtered_buffer);
+	AD9833_Parse_Commands_From_Buffer_USART(filtered_buffer);
+}
+
+// Задача индикатора
+void Indicator_Task(uint32_t TASK_period)
+{
+	static uint8_t TASK_state = 0;
+	static uint32_t TASK_last_execution_time;
+	// если времени прошло достаточно с последнего выполнения этой задачи, то нужно выполнить эту задачу снова
+	if (is_time_passed_ms(TASK_last_execution_time, TASK_period)) TASK_state = 1;
+
+	switch (TASK_state)
+	{
+		case 0: return;
+		case 1:
+		switch (Blink_Mode)
+		{
+			case 0: Seven_Segment_Indicate_Number(Green_Blinks_Counter);	break;
+			case 1: Seven_Segment_Indicate_Number(123456789);				break;
+			case 2: Seven_Segment_Indicate_String("ABCDEFGH1234567890");	break;
+		}
+		TASK_state = 0;
+		TASK_last_execution_time = get_current_ms();
+	}
+}
+
+// Задача LED
+void LED_Blink_Task(uint32_t TASK_period)
+{
+	static uint8_t Task_State;
+	static uint8_t LED_State;
+	static uint32_t TASK_last_execution_time;
+
+	// если прошло нужное время после последнего выполнения задачи
+	if (is_time_passed_ms(TASK_last_execution_time, TASK_period))
+	{
+		Task_State = 1;
+	}
+	else
+	{
+		Task_State = 0;
+	}
+
+	switch (Task_State)
+	{
+		case 0: return;
+
+		case 1:
+		switch (LED_State)
+		{
+			case 0:
+			{
+				LED_State = 1;
 				switch (Blink_Mode)
 				{
 					case 0: GPIO_set_HIGH(GPIOD, 12);	Green_Blinks_Counter++;		break;
 					case 1: GPIO_set_HIGH(GPIOD, 13);	Orange_Blinks_Counter++;	break;
 					case 2: GPIO_set_HIGH(GPIOD, 14);	Red_Blinks_Counter++;		break;
 				}
-				start = get_current_ms();
+				if ((Green_Blinks_Counter > 999) || (Orange_Blinks_Counter > 999) || (Red_Blinks_Counter > 999))
+				{
+					Green_Blinks_Counter = 0;
+					Orange_Blinks_Counter = 0;
+					Red_Blinks_Counter = 0;
+				}
+				break;
 			}
 
-			if ((Green_Blinks_Counter > 999) || (Orange_Blinks_Counter > 999) || (Red_Blinks_Counter > 999))
+			case 1:
 			{
-				Green_Blinks_Counter = 0;
-				Orange_Blinks_Counter = 0;
-				Red_Blinks_Counter = 0;
+				LED_State = 0;
+				LED_turnOFF_4_LED();
+				break;
 			}
 
-			while (Amount_of_Commands)	// выполнить все команды, какие есть в очереди
-			{
-				AD9833_Execute_Command(USART3, &Output_Signal);	// после выполнения команды отправить команду обратно отправителю
+		}
+		TASK_last_execution_time = get_current_ms();
+	}
+}
 
-				AD9833_Module_Init(SPI1, &Output_Signal);
-				//AD9833_print_Signal_Parameters(&Output_Signal);
+void Task_LED_1(uint32_t TASK_period)
+{
+	static uint8_t Task_State;
+	static uint8_t LED_State;
+	static uint32_t TASK_last_execution_time;
+	static uint32_t counter;
+
+	// если прошло нужное время после последнего выполнения задачи
+	if (is_time_passed_ms(TASK_last_execution_time, TASK_period))
+	{
+		Task_State = 1;
+	}
+	else
+	{
+		Task_State = 0;
+	}
+
+	switch (Task_State)
+	{
+		case 0: return;
+
+		case 1:
+		switch (LED_State)
+		{
+			case 0:
+			{
+				LED_State = 1;
+				GPIO_set_HIGH(GPIOD, 12);
+				counter++;
+				//printf("LED1: %d\n", counter);
+				break;
+			}
+
+			case 1:
+			{
+				LED_State = 0;
+				GPIO_set_LOW(GPIOD, 12);
+				break;
 			}
 		}
+		TASK_last_execution_time = get_current_ms();
+	}
+}
 
-		// RXNE поднят, прием байт
-		USART_Receive(USART3, BUFFER_USART, '!');
+void Task_LED_2(uint32_t TASK_period)
+{
+	static uint8_t Task_State;
+	static uint8_t LED_State;
+	static uint32_t TASK_last_execution_time;
+	static uint32_t counter;
 
-		// фильтрация буфера и занесение команд в очередь
-		AD9833_filter_Buffer_USART(BUFFER_USART, BUFFER_USART_FILTERED);
-		AD9833_Parse_Commands_From_Buffer_USART(BUFFER_USART_FILTERED);
+	// если прошло нужное время после последнего выполнения задачи
+	if (is_time_passed_ms(TASK_last_execution_time, TASK_period))
+	{
+		Task_State = 1;
+	}
+	else
+	{
+		Task_State = 0;
+	}
+
+	switch (Task_State)
+	{
+		case 0: return;
+
+		case 1:
+		switch (LED_State)
+		{
+			case 0:
+			{
+				LED_State = 1;
+				GPIO_set_HIGH(GPIOD, 13);
+				counter++;
+				//printf("LED2: %d\n", counter);
+				break;
+			}
+
+			case 1:
+			{
+				LED_State = 0;
+				GPIO_set_LOW(GPIOD, 13);
+				break;
+			}
+		}
+		TASK_last_execution_time = get_current_ms();
+	}
+}
+
+void Task_LED_3(uint32_t TASK_period)
+{
+	static uint8_t Task_State;
+	static uint8_t LED_State;
+	static uint32_t TASK_last_execution_time;
+	static uint32_t counter;
+
+	// если прошло нужное время после последнего выполнения задачи
+	if (is_time_passed_ms(TASK_last_execution_time, TASK_period))
+	{
+		Task_State = 1;
+	}
+	else
+	{
+		Task_State = 0;
+	}
+
+	switch (Task_State)
+	{
+		case 0: return;
+
+		case 1:
+		switch (LED_State)
+		{
+			case 0:
+			{
+				LED_State = 1;
+				GPIO_set_HIGH(GPIOD, 14);
+				counter++;
+				//printf("LED3: %d\n", counter);
+				break;
+			}
+
+			case 1:
+			{
+				LED_State = 0;
+				GPIO_set_LOW(GPIOD, 14);
+				break;
+			}
+		}
+		TASK_last_execution_time = get_current_ms();
+	}
+}
+
+void Task_LED_4(uint32_t TASK_period)
+{
+	static uint8_t Task_State;
+	static uint8_t LED_State;
+	static uint32_t TASK_last_execution_time;
+	static uint32_t counter;
+
+	// если прошло нужное время после последнего выполнения задачи
+	if (is_time_passed_ms(TASK_last_execution_time, TASK_period))
+	{
+		Task_State = 1;
+	}
+	else
+	{
+		Task_State = 0;
+	}
+
+	switch (Task_State)
+	{
+		case 0: return;
+
+		case 1:
+		switch (LED_State)
+		{
+			case 0:
+			{
+				LED_State = 1;
+				GPIO_set_HIGH(GPIOD, 15);
+				counter++;
+				//printf("LED4: %d\n", counter);
+				break;
+			}
+
+			case 1:
+			{
+				LED_State = 0;
+				GPIO_set_LOW(GPIOD, 15);
+				break;
+			}
+		}
+		TASK_last_execution_time = get_current_ms();
 	}
 }

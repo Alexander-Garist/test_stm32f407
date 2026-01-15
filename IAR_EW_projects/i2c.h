@@ -12,14 +12,14 @@
 
 #define EEPROM_ADDRESS						0x50							// 7-битный адрес подключенного модуля EEPROM, пины A0, A1 подтянуты к земле 1010000
 #define START_ADDRESS						0x00							// Адрес в памяти EEPROM, куда записываются данные
-#define length_All_Data						0x20000							// Суммарное количество отправленных байт в память EEPROM 131072
-#define length_Transmitted_Data				4096							// Максимальное количество отправленных байт за 1 операцию отправки (16 страниц по 256 байт)
-#define length_Received_Data				4096							// Количество считанных байт из памяти EEPROM
+#define LENGTH_ALL_DATA						0x20000							// Суммарное количество отправленных байт в память EEPROM 131072
+#define LENGTH_TRANSMITTED_DATA				4096							// Максимальное количество отправленных байт за 1 операцию отправки (16 страниц по 256 байт)
+#define LENGTH_RECEIVED_DATA				4096							// Количество считанных байт из памяти EEPROM
 #define MAX_NUMBER_ATTEMPTS_CONNECT_EEPROM	10								// Максимум попыток подключиться к EEPROM за один раз
-#define data_2_byte_SIZE					(length_Transmitted_Data / 2)   // Размер массива 2-байтных данных
-#define send_SIZE							512								// Размер массива данных, заполненного буквами
+#define DATA_2_BYTE_SIZE					(LENGTH_TRANSMITTED_DATA / 2)   // Размер массива 2-байтных данных
+#define SEND_SIZE							512								// Размер массива данных, заполненного буквами
 
-extern uint16_t data_2_byte[data_2_byte_SIZE];         // Массив двухбайтных данных 2048 чисел = 4096 байт
+extern uint16_t data_2_byte[DATA_2_BYTE_SIZE];         // Массив двухбайтных данных 2048 чисел = 4096 байт
 
 /************************* Перечисление статусов выполнения функций I2C ***********************************************/
 typedef enum

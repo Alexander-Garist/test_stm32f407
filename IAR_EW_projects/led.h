@@ -8,20 +8,20 @@
 /** Выводы GPIO к которым подключены светодиоды на плате **************************************************************/
 
 // Зеленый LED
-#define GPIO_Port_LED_0	GPIOD
-#define GPIO_Pin_LED_0	12
+#define GPIO_PORT_LED_0	GPIOD
+#define GPIO_PIN_LED_0	12
 
 // Оранжевый LED
-#define GPIO_Port_LED_1	GPIOD
-#define GPIO_Pin_LED_1	13
+#define GPIO_PORT_LED_1	GPIOD
+#define GPIO_PIN_LED_1	13
 
 // Красный LED
-#define GPIO_Port_LED_2	GPIOD
-#define GPIO_Pin_LED_2	14
+#define GPIO_PORT_LED_2	GPIOD
+#define GPIO_PIN_LED_2	14
 
 // Синий LED
-#define GPIO_Port_LED_3	GPIOD
-#define GPIO_Pin_LED_3	15
+#define GPIO_PORT_LED_3	GPIOD
+#define GPIO_PIN_LED_3	15
 
 /** Периоды моргания светодиодов в 3 режимах **************************************************************************/
 
@@ -36,6 +36,7 @@ extern uint32_t Blink_Period;
 extern uint32_t Green_Blinks_Counter;
 extern uint32_t Orange_Blinks_Counter;
 extern uint32_t Red_Blinks_Counter;
+extern uint32_t Blue_Blinks_Counter;
 
 // Текущий режим моргания должен быть доступен в main.c
 extern uint32_t Blink_Mode;
@@ -51,6 +52,5 @@ void LED_turnON_4_LED(void);
 
 // Выключить все LED
 void LED_turnOFF_4_LED(void);
-
 
 #endif /* __LED_H__ */
