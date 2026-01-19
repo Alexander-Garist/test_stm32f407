@@ -98,6 +98,17 @@ void GPIO_Button_Enable(
 	uint8_t			GPIO_pin
 );
 
+	/**
+	! Функция GPIO_Read_Pin считывает логический уровень выбранного пина.
+	- GPIO_port - порт GPIO
+	- GPIO_pin - пин GPIO
+	*/
+uint8_t GPIO_Read_Pin(
+	GPIO_TypeDef*	GPIO_port,
+	uint8_t			GPIO_pin
+);
+
+
 /*********************** Иницализация портов GPIO в режиме альтернативной функции *************************************/
 	/**
 	! Функция GPIO_Enable_I2C инициализирует порт GPIO в режиме альтернативной

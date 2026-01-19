@@ -121,6 +121,14 @@ void GPIO_Button_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
     GPIO_init_INPUT(GPIO_port, GPIO_pin);		// Инициализация ввода GPIO
 }
 
+
+uint8_t GPIO_Read_Pin(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+{
+	return ((GPIO_port->IDR) >> GPIO_pin) & 1;
+}
+
+
+
 // Инициализация GPIO в режиме I2C
 void GPIO_Enable_I2C(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 {

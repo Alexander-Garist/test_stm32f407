@@ -54,9 +54,9 @@ extern uint32_t Amount_of_Commands;				// Количество команд дл
 // Параметры выходного сигнала
 typedef struct
 {
-    uint32_t frequency;
-    uint8_t amplitude;
-    uint16_t wave_form;
+    uint32_t frequency;	// <= 12500000
+    uint8_t amplitude;	// < 256
+    uint16_t wave_form;	// 0-2
 }Signal_Parameters;
 
 /****************************************** Function prototypes *******************************************************/

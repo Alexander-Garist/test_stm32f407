@@ -1,7 +1,9 @@
-// LED.h
-// библиотека для пользования встроенными светодиодами
-// прототипы функций включения/выключения, смена режима моргания
+/**
+  * @file    LED.h
+  * @brief   Файл содержит информацию о подключении встроенных светодиодов,	прототипы функций включения и режима работы.
+  */
 
+/** Define to prevent recursive inclusion *****************************************************************************/
 #ifndef __LED_H__
 #define __LED_H__
 
@@ -29,28 +31,38 @@
 #define TIME_MEDIUM     200
 #define TIME_LONG       500
 
-// Период моргания должен быть доступен в main.c
+// Период моргания
 extern uint32_t Blink_Period;
 
-// Счетчики морганий должны быть доступны в main.c
+// Счетчики морганий
 extern uint32_t Green_Blinks_Counter;
 extern uint32_t Orange_Blinks_Counter;
 extern uint32_t Red_Blinks_Counter;
 extern uint32_t Blue_Blinks_Counter;
 
-// Текущий режим моргания должен быть доступен в main.c
+// Текущий режим моргания
 extern uint32_t Blink_Mode;
 
-// Установить новый период моргания
-void LED_Set_Blink_Period(uint32_t time);
+	/**
+	! Функция установки режима моргания.
+	- period - новый период моргания в мс.
+	*/
+void LED_Set_Blink_Period(uint32_t period);
 
-// Смена режима моргания
+	/**
+	! Функция смены режима моргания светодиодов.
+	- (*callback)(uint32_t) - callback функция для установки нового режима моргания.
+	*/
 void LED_change_blink_mode(void (*callback)(uint32_t));
 
-// Включить все LED
+	/**
+	! Функция включения всех 4 пользовательских светодиодов на плате: PD12, PD13, PD14, PD15.
+	*/
 void LED_turnON_4_LED(void);
 
-// Выключить все LED
+	/**
+	! Функция выключения всех 4 пользовательских светодиодов на плате: PD12, PD13, PD14, PD15.
+	*/
 void LED_turnOFF_4_LED(void);
 
 #endif /* __LED_H__ */
