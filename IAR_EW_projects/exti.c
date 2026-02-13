@@ -4,7 +4,7 @@
   */
 
 /** Includes **********************************************************************************************************/
-
+#include <stdio.h>
 #include "exti.h"
 #include "CMSIS/stm32f4xx.h"
 #include "gpio.h"
@@ -150,34 +150,104 @@ void EXTI_Clear_Flag(uint32_t EXTI_pin)
     EXTI->PR = (1 << EXTI_pin);
 }
 
+
+uint32_t Interrupt_EXTI0_Occured = 0;
+uint32_t Last_Interrupt_Time_ms = 0;	// момент последнего вызова прерывания
+
+
+
 // Обработчик внешнего прерывания на выводах Px0, где x => GPIOx
 void EXTI0_IRQHandler(void)
 {
-    Button_IRQHandler();
-}
+	// Прерывание вызывается и при нажатии, и при отпускании кнопки из-за дребезга контактов кнопки
+
+	uint32_t current_time_ms = get_current_ms();
+
+	// короткое нажатие длится 70-120 мс, значит отпускание тоже успеет вызвать свое прерывание
+	if (is_time_passed_ms(Last_Interrupt_Time_ms, 50))
+	{
+		Last_Interrupt_Time_ms = current_time_ms;
+		Interrupt_EXTI0_Occured = 1;	// Поднимается флаг "прерывание вызвано"
+	}
+
+	EXTI_Clear_Flag(BUTTON_GPIO_PIN);
 
 
+//========================================================================================================================================================
+/*	// Рабочая версия прерывания, все нажатия корректно обрабатываются, дребезга и ошибочных нажатий нет, но длительность прерывания 250 мс
 
+	// Вход в критическую секцию => новое прерывание не должно вызываться чтобы не сбить логику двойного нажатия
+	EXTI_Disable_Pin(BUTTON_EXTI_PORT, BUTTON_GPIO_PIN);
 
+	// Моменты нажатия и отпускания кнопки
+	uint32_t pressing_time = get_current_ms();	// Прерывание вызвано при нажатии
+	uint32_t releasing_time;					// Кнопка еще может быть не отпущена
 
+	uint32_t interrupt_start_ms = get_current_ms();
 
+	// Ожидание пока кнопка нажата, чтобы определить длинное нажатие
+	// длится 80 мс
+	while (GPIO_Read_Pin(BUTTON_GPIO_PORT, BUTTON_GPIO_PIN))
+	{
+		delay_ms(1);
+	}
 
+	uint32_t interrupt_duration = get_current_ms();
+	interrupt_duration -= interrupt_start_ms;
 
+	//printf("%d\n", interrupt_duration);
 
+	// Цикл завершается когда кнопку отпустили, этот момент запоминается
+	releasing_time = get_current_ms();
 
-/* старая версия
-// Обработчик внешнего прерывания на выводах Px0, где x => GPIOx
-void EXTI0_IRQHandler(void)
-{
-    GPIO_set_HIGH(GPIOD, 15);								// Индикация нажатия кнопки синим светодиодом
-	//delay_ms(100);
-    uint32_t current_time = get_current_ms();				// Момент времени начала обработки прерывания
-    if (current_time - button_last_press_time > DEBOUNCE_TIME)
-    {
-        LED_change_blink_mode(LED_Set_Blink_Period);		// Логика нажатия на кнопку - смена режима
-		button_last_press_time = get_current_ms();				// Обновить время последнего нажатия
-    }
-    EXTI_Clear_Flag(0);										// Сброс флага для выхода из прерывания
-    LED_turnOFF_4_LED();									// Выключение всех светодиодов
-}
+	// Проверка продолжительности нажатия, в случае длинного нажатия больше проверок нет
+	if (is_time_passed_ms(pressing_time, LONG_PRESS_TIME))
+	{
+		Button_State = SINGLE_LONG_PRESS;			// Зафиксировано одно длинное нажатие
+		Button_Last_Press_Time_ms = get_current_ms();	// Обновление времени последнего нажатия
+	}
+	// В случае короткого еще может быть двойное нажатие
+	else
+	{
+		// Проверка продолжительности нажатия (антидребезг)
+		if (releasing_time - Button_Last_Press_Time_ms >= DEBOUNCE_TIME)
+		{
+			LED_change_blink_mode(LED_Set_Blink_Period);	// Логика одиночного нажатия на кнопку - смена режима моргания
+			Button_State = SINGLE_SHORT_PRESS;				// Зафиксировано одно короткое нажатие
+			Button_Last_Press_Time_ms = get_current_ms();		// Обновить время последнего нажатия
+		}
+
+		// Ожидание второго короткого нажатия
+		while (!is_time_passed_ms(Button_Last_Press_Time_ms, RELEASED_TIME))
+		{
+			if (GPIO_Read_Pin(BUTTON_GPIO_PORT, BUTTON_GPIO_PIN))
+			{
+				releasing_time = get_current_ms();
+			}
+			if (releasing_time - Button_Last_Press_Time_ms >= DEBOUNCE_TIME)
+			{
+				Button_State = DOUBLE_PRESS;
+			}
+		}
+	}
+
+	// Сброс флага для выхода из прерывания
+	EXTI_Clear_Flag(0);
+
+	//printf("%d\n", interrupt_duration); // длительнось прерывания 250+ мс
+
+	// Выход из критической секции => включение обработки прерываний
+	EXTI_Enable_Pin(BUTTON_EXTI_PORT, BUTTON_GPIO_PIN, BUTTON_TRIGGER);
 */
+//========================================================================================================================================================
+
+}
+
+
+
+
+
+
+
+
+

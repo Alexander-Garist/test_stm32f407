@@ -15,6 +15,14 @@
 #define EXTI_TRIGGER_FALLING        (0x02)
 #define EXTI_TRIGGER_RISING_FALLING (0x03)
 
+
+extern uint32_t Last_Interrupt_Time_ms;			// момент последнего вызова прерывания
+extern uint32_t Interrupt_EXTI0_Occured;		// флаг факта вызова прерывания
+
+
+
+
+
 /** Перечисление портов GPIO, на которых возможно использование внешних прерываний, в RM п. 9.2.3 SYSCFG_EXTICR[x] ****/
 typedef enum
 {

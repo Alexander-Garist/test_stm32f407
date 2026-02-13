@@ -4,7 +4,7 @@
   */
 
 /** Includes **********************************************************************************************************/
-//#include <stdio.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "CMSIS/stm32f4xx.h"
@@ -19,24 +19,35 @@
 #include "LED.h"
 #include "button.h"
 
+typedef enum
+{
+	TASK_OK = 0,
+	TASK_ERROR = -1
+}Task_Status_t;
+
+
+
 /** Прототипы задач */
 
 void Task_Press_Button();																// Задача обработки нажатия кнопки
-void Task_AD9833_ExecuteCommand(Signal_Parameters* out_signal, uint32_t TASK_period);	// Задача AD9833 по выполнению команд
-void Task_AD9833_GetCommand(char* buffer, char* filtered_buffer);						// Задача AD9833 по парсингу команд из буфера USART
-void Task_Indicator(uint32_t TASK_period);												// Задача индикатора
-void Task_LED_Blink(uint32_t TASK_period);												// Задача LED
-void Task_Enable_Peripherals(void);														// Задача включения периферии
-void Task_Test_I2C(void);																// Задача проверки работоспособности модуля I2C
-void Task_Test_SPI(void);																// Задача проверки работоспособности модуля SPI
+Task_Status_t Task_AD9833_ExecuteCommand(Signal_Parameters* out_signal, uint32_t TASK_period);	// Задача AD9833 по выполнению команд
+Task_Status_t Task_AD9833_GetCommand(char* buffer, char* filtered_buffer);						// Задача AD9833 по парсингу команд из буфера USART
+Task_Status_t Task_Indicator(uint32_t TASK_period);												// Задача индикатора
+Task_Status_t Task_LED_Blink(uint32_t TASK_period);												// Задача LED
+void Task_Enable_Peripherals(void);																// Задача включения периферии
+Task_Status_t Task_Test_I2C(void);																// Задача проверки работоспособности модуля I2C
+Task_Status_t Task_Test_SPI(void);																// Задача проверки работоспособности модуля SPI
 
 int main()
 {
+	Task_Status_t Program_Status = TASK_OK;
 	/** Включение периферии *******************************************************************************************/
 	Task_Enable_Peripherals();
 
 	/** Проверка работоспособности модуля I2C1: чтение из памяти, запись в память *************************************/
-	//Task_Test_I2C();
+	//if (Task_Test_I2C() != TASK_OK) Program_Status = TASK_ERROR;
+
+	//printf("%d\n", Program_Status);
 
 	/** Проверка работоспособности модуля SPI2: чтение из памяти, стирание памяти, запись в память ********************/
     //Task_Test_SPI();
@@ -61,27 +72,40 @@ int main()
     /**************** Основной цикл: мигание светодиодов и обработка нажатий кнопки ***********************************/
 	/** Основной цикл теперь будет содержать не только моргание светодиодами и обработку нажатий кнопки,
 		но и прием/передачу команд для генератора сигналов через USART */
+
+	uint32_t blink_ms = get_current_ms();
 	while (1)
 	{
 		// Пока ничего не пришло по USART выполняются задачи индикатора, LED и AD9833 по выполнению команд
 		while (!(USART3->SR & USART_SR_RXNE))
 		{
-			Task_Indicator(REFRESH_PERIOD);						// Задача индикатора должна выполняться каждые 10 мс
+			if (is_time_passed_ms(blink_ms, 100))
+			{
+				GPIO_toggle_Pin(GPIOD, 14);
+				blink_ms = get_current_ms();
+			}
+
+
+			if (TASK_OK != Task_Indicator(REFRESH_PERIOD)) Program_Status = TASK_ERROR;						// Задача индикатора должна выполняться каждые 10 мс
 			Task_Press_Button();								// Задача обработки нажатий кнопки
 			//Task_LED_Blink(Blink_Period);						// Задача моргания LED должна выполняться каждые 100/200/500 мс
-			Task_AD9833_ExecuteCommand(&Output_Signal, 100);	// Каждые 100 мс проверяется, есть ли что-то в очереди команд AD9833
+			if (TASK_OK != Task_AD9833_ExecuteCommand(&Output_Signal, 100)) Program_Status = TASK_ERROR;;	// Каждые 100 мс проверяется, есть ли что-то в очереди команд AD9833
+
+
+			if (Program_Status != TASK_OK) GPIO_set_HIGH(GPIOD, 14);
+
 		}
 
 		// Если что-то пришло в буфер USART выполнить задачи USART и AD9833 по парсингу новых команд
 		USART_Receive(USART3, BUFFER_USART, '!');
-		Task_AD9833_GetCommand(BUFFER_USART, BUFFER_USART_FILTERED);
+		if (TASK_OK != Task_AD9833_GetCommand(BUFFER_USART, BUFFER_USART_FILTERED)) Program_Status = TASK_ERROR;
 	}
 }
 
 /*************************************************************************************************************************/
 
 // Задача AD9833 по выполнению команд из очереди
-void Task_AD9833_ExecuteCommand(Signal_Parameters* out_signal, uint32_t TASK_period)
+Task_Status_t Task_AD9833_ExecuteCommand(Signal_Parameters* out_signal, uint32_t TASK_period)
 {
 	static uint8_t TASK_state;					// Состояние задачи
 	static uint32_t TASK_last_execution_time;	// Момент последнего выполнения задачи
@@ -91,7 +115,7 @@ void Task_AD9833_ExecuteCommand(Signal_Parameters* out_signal, uint32_t TASK_per
 
 	switch (TASK_state)
 	{
-		case 0: return;
+		case 0: break;
 		case 1:
 		{
 			while (Amount_of_Commands)	// выполнить все команды генератора сигналов, какие есть в очереди
@@ -102,18 +126,21 @@ void Task_AD9833_ExecuteCommand(Signal_Parameters* out_signal, uint32_t TASK_per
 			TASK_last_execution_time = get_current_ms();
 		}
 	}
+	return TASK_OK;
 }
 
 // Задача AD9833 по парсингу команд из буфера USART
-void Task_AD9833_GetCommand(char* buffer, char* filtered_buffer)
+Task_Status_t Task_AD9833_GetCommand(char* buffer, char* filtered_buffer)
 {
 	// Фильтрация буфера и занесение команд в очередь
 	AD9833_filter_Buffer_USART(buffer, filtered_buffer);
 	AD9833_Parse_Commands_From_Buffer_USART(filtered_buffer);
+
+	return TASK_OK;
 }
 
 // Задача индикатора
-void Task_Indicator(uint32_t TASK_period)
+Task_Status_t Task_Indicator(uint32_t TASK_period)
 {
 	static uint8_t TASK_state = 0;
 	static uint32_t TASK_last_execution_time;
@@ -122,7 +149,7 @@ void Task_Indicator(uint32_t TASK_period)
 
 	switch (TASK_state)
 	{
-		case 0: return;
+		case 0: break;
 		case 1:
 		switch (Blink_Mode)
 		{
@@ -133,10 +160,11 @@ void Task_Indicator(uint32_t TASK_period)
 		TASK_state = 0;
 		TASK_last_execution_time = get_current_ms();
 	}
+	return TASK_OK;
 }
 
 // Задача LED (переключение режима моргания через нажатие кнопки)
-void Task_LED_Blink(uint32_t TASK_period)
+Task_Status_t Task_LED_Blink(uint32_t TASK_period)
 {
 	static uint8_t Task_State;
 	static uint8_t LED_State;
@@ -154,7 +182,7 @@ void Task_LED_Blink(uint32_t TASK_period)
 
 	switch (Task_State)
 	{
-		case 0: return;
+		case 0: break;
 
 		case 1:
 		switch (LED_State)
@@ -187,20 +215,95 @@ void Task_LED_Blink(uint32_t TASK_period)
 		}
 		TASK_last_execution_time = get_current_ms();
 	}
+	return TASK_OK;
 }
 
-// Задача обработки нажатий кнопки в виде конечного автомата,
-// т.к. кнопка может быть нажата только одним способом одновременно.
-// Эта задача не имеет периода исполнения, т.к. должна выполняться как только состояние кнопки изменилось.
+
+
+
+
+
+
+
 void Task_Press_Button(void)
 {
+	/** Проверка на дребезг. Отключается обработка внешних прерываний, определяется причина прерывания
+		(нажатие или отпускание кнопки), запоминаются моменты нажатия и отпускания */
+	if (Interrupt_EXTI0_Occured)
+	{
+		EXTI_Disable_Pin(BUTTON_EXTI_PORT, BUTTON_GPIO_PIN);
+
+		if (is_time_passed_ms(Last_Interrupt_Time_ms, DEBOUNCE_TIME))
+		{
+			if (GPIO_Read_Pin(BUTTON_GPIO_PORT, BUTTON_GPIO_PIN))
+			{
+				// Кнопка нажата
+				Button_Last_Press_Time_ms = get_current_ms();
+				button_is_released = FALSE;
+			}
+			else
+			{
+				// Кнопка отпущена
+				Button_Last_Release_Time_ms = get_current_ms();
+				button_is_released = TRUE;
+			}
+
+			Interrupt_EXTI0_Occured = FALSE;
+		}
+	}
+
+	/** Если после вызова прерывания прошло 30 мс, значит прерывание уже обработано => включается обработка прерываний */
+	if (is_time_passed_ms(Last_Interrupt_Time_ms, INTERRUPT_ENABLE_TIME))
+	{
+		EXTI_Enable_Pin(BUTTON_EXTI_PORT, BUTTON_GPIO_PIN, BUTTON_TRIGGER);
+	}
+
+	/** После отпускания кнопки можно определить тип нажатия */
+	if (button_is_released)
+	{
+		// Флаг button_is_released сбрасывается, т.к. сейчас однозначно будет определена длительность нажатия
+		button_is_released = FALSE;
+		Button_Press_Duration_ms = Button_Last_Release_Time_ms - Button_Last_Press_Time_ms;
+
+		// Длинное нажатие => точно одиночное длинное
+		if (Button_Press_Duration_ms >= LONG_PRESS_TIME)
+		{
+			Button_State = SINGLE_LONG_PRESS;
+			Short_Press_Release_ms = FALSE;
+		}
+
+		// Короткое нажатие => или одиночное, или двойное
+		else
+		{
+			if (Button_Press_Duration_ms > SHORT_PRESS_TIME)
+			{
+				// Если в Short_Press_Release_ms НЕ сохранено какое-то ненулевое время, значит это только первое короткое нажатие, возможно будет еще второе
+				if (!Short_Press_Release_ms)
+				{
+					Short_Press_Release_ms = Button_Last_Release_Time_ms;
+				}
+				// Если уже что-то было сохранено, значит произошло двойное нажатие
+				else
+				{
+					Button_State = DOUBLE_PRESS;
+					Short_Press_Release_ms = FALSE;
+				}
+			}
+		}
+	}
+
+
+	// Если не произошло второго короткого нажатия за время RELEASED_TIME => нажатие одиночное короткое
+	if ((Short_Press_Release_ms) && (is_time_passed_ms(Short_Press_Release_ms, RELEASED_TIME)))
+	{
+		Button_State = SINGLE_SHORT_PRESS;
+		Short_Press_Release_ms = FALSE;
+	}
+
+	// Конечный автомат для выбора нужного обработчика определенного нажатия
 	switch (Button_State)
 	{
-		// Если кнопка не была нажата либо нажатие уже было обработано => ее состояние RELEASED
 		case (RELEASED): break;
-
-		// Если кнопка нажата, но это событие еще не обработано => вызывается обработчик нажатия,
-		// в котором после обработки нажатия состояние кнопки становится RELEASED
 		case (SINGLE_SHORT_PRESS):	Button_Single_Short_Press_Handler();	break;
 		case (SINGLE_LONG_PRESS):	Button_Single_Long_Press_Handler();		break;
 		case (DOUBLE_PRESS):		Button_Double_Press_Handler();			break;
@@ -210,6 +313,9 @@ void Task_Press_Button(void)
 // Включение периферии
 void Task_Enable_Peripherals(void)
 {
+	/** Включение системного таймера **********************************************************************************/
+	SysTick_Init();
+
 	/** Инициализация портов GPIO User_Button и встроенных LED ********************************************************/
 
 	GPIO_Button_Enable(GPIOA, 0);                       // Определение порта PA0 как вход с кнопкой
@@ -218,7 +324,6 @@ void Task_Enable_Peripherals(void)
  	/** Включение обработки внешних прерываний для PA0 (User_Button) и системного таймера для неблокирующих задержек **/
 
     EXTI_Enable_Pin(EXTI_PortA, 0, BUTTON_TRIGGER);     // Включить внешние прерывания для этого пина
-    SysTick_Init();										// Включение SysTick
 
 	/** Настройка модуля I2C1 и инициализация портов GPIO в режиме альтернативной функции I2C *************************/
 
@@ -274,8 +379,9 @@ void Task_Enable_Peripherals(void)
 }
 
 // Проверка работоспособности модуля I2C
-void Task_Test_I2C(void)
+Task_Status_t Task_Test_I2C(void)
 {
+	Task_Status_t Task_Status = TASK_OK;	// Статус выполнения задачи
 	uint8_t Received_Data[LENGTH_RECEIVED_DATA] = { 0 };
 
 	// Попытки подключиться к EEPROM
@@ -299,6 +405,7 @@ void Task_Test_I2C(void)
 				uint32_t Transmission_ADDRESS = START_ADDRESS + counter * 2;    // Адрес отправки одной порции данных
 
 				I2C_Status_t status_Transmission = BL24CM1A_Write(I2C1, EEPROM_ADDRESS, Transmission_ADDRESS, Transmitted_Data, LENGTH_TRANSMITTED_DATA);
+				if (status_Transmission != I2C_OK) Task_Status = TASK_ERROR;
 			}
 			LED_turnON_4_LED();
 			delay_ms(500);
@@ -313,7 +420,7 @@ void Task_Test_I2C(void)
 
 			I2C_Status_t status_Transmission = BL24CM1A_Write(I2C1, EEPROM_ADDRESS, 0x180, Transmitted_Data, SEND_SIZE);
 
-			if (status_Transmission != I2C_OK) GPIO_set_HIGH(GPIOD, 14);
+			if (status_Transmission != I2C_OK) Task_Status = TASK_ERROR;
 
 			// Прием данных порциями по 4096 байт в цикле
 			for (uint32_t counter = 0; counter < LENGTH_ALL_DATA / 2; counter += DATA_2_BYTE_SIZE)
@@ -322,7 +429,7 @@ void Task_Test_I2C(void)
 
 				I2C_Status_t status_Reception = BL24CM1A_Read(I2C1, EEPROM_ADDRESS, Reception_ADDRESS, Received_Data, LENGTH_RECEIVED_DATA);
 				if (status_Reception == I2C_OK) GPIO_set_HIGH(GPIOD, 15);
-				else GPIO_set_HIGH(GPIOD, 14);
+				else Task_Status = TASK_ERROR;
 
 				// Вывести номер операции чтения
 				//printf("\nПрочитано 4096 байт, блок %d\n", counter / 2048);
@@ -342,13 +449,17 @@ void Task_Test_I2C(void)
 			GPIO_set_HIGH(GPIOD, 14);   delay_ms(300);					// Красный моргнул - EEPROM не готова
 			GPIO_set_LOW(GPIOD, 14);    delay_ms(300);
 			Error_Counter++;
+			Task_Status = TASK_ERROR;
 		}
 	}
+	return Task_Status;
 }
 
 // Проверка работоспособности модуля SPI
-void Task_Test_SPI(void)
+Task_Status_t Task_Test_SPI(void)
 {
+	Task_Status_t Task_Status = TASK_OK;	// Статус выполнения задачи
+
 	uint8_t unique_id[8];
 	FM25Q08B_Read_Unique_ID(SPI2, unique_id);
 /*
@@ -384,7 +495,7 @@ void Task_Test_SPI(void)
 									 received_data,			// Указатель на массив данных, в который записываются считанные данные
 									 FLASH_PAGE_SIZE		// Количество считанных байт
 										 );
-	if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
+	if (reception_status != FM25Q08B_OK)  Task_Status = TASK_ERROR;
 /*
 	printf("Проверка чтения\n");
 	for (uint32_t i = 0; i < 10; i++)
@@ -395,7 +506,7 @@ void Task_Test_SPI(void)
 	/************************************** Проверка стирания памяти **************************************************/
 
 	erasion_status = FM25Q08B_Chip_Erase(SPI2);
-	if (erasion_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 13);
+	if (erasion_status != FM25Q08B_OK)  Task_Status = TASK_ERROR;
 
 	reception_status = FM25Q08B_Read(
 									 SPI2,
@@ -403,7 +514,7 @@ void Task_Test_SPI(void)
 									 received_data, 		// Указатель на массив данных, в который записываются считанные данные
 									 FLASH_PAGE_SIZE		// Количество считанных байт
 	);
-	if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
+	if (reception_status != FM25Q08B_OK)  Task_Status = TASK_ERROR;
 /*
 	printf("Проверка стирания памяти\n");
 	for (uint32_t i = 0; i < 10; i++)
@@ -445,7 +556,7 @@ void Task_Test_SPI(void)
 											 transmitted_data_test,									// Указатель на массив данных, которые записываются в память
 											 FLASH_PAGE_SIZE										// Количество записанных байт
 		);
-		if (transmission_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 15);
+		if (transmission_status != FM25Q08B_OK)  Task_Status = TASK_ERROR;
 
 		reception_status = FM25Q08B_Read(
 										 SPI2,
@@ -453,7 +564,7 @@ void Task_Test_SPI(void)
 										 received_data_test,										// Указатель на массив данных, в который записываются считанные данные
 										 FLASH_PAGE_SIZE											// Количество считанных байт
 											 );
-		if (reception_status == FM25Q08B_OK)  GPIO_set_HIGH(GPIOD, 12);
+		if (reception_status != FM25Q08B_OK)  Task_Status = TASK_ERROR;
 /*
 		printf("Номер страницы: %d\n", page_number);
 		for (uint8_t i = 0; i < 3; i++)
@@ -467,11 +578,10 @@ void Task_Test_SPI(void)
 	LED_turnOFF_4_LED();
 
 	// Если есть ошибки - загорится красный светодиод на 1 секунду
-	if ((reception_status != FM25Q08B_OK)
-		|| (transmission_status != FM25Q08B_OK)
-		|| (erasion_status != FM25Q08B_OK))
+	if (Task_Status != TASK_OK)
 	{
 		GPIO_set_HIGH(GPIOD, 14);
+		delay_ms(1000);
 	}
-	delay_ms(1000);
+	return Task_Status;
 }
