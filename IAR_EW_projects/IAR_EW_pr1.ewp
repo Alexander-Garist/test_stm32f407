@@ -2163,6 +2163,9 @@
             <name>$PROJ_DIR$\LED.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\soft_SWD.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\spi.h</name>
         </file>
         <file>
@@ -2200,6 +2203,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\LED.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\soft_SWD.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\spi.c</name>

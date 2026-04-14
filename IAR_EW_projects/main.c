@@ -19,6 +19,7 @@
 #include "LED.h"
 #include "button.h"
 
+#include "soft_SWD.h"
 typedef enum
 {
 	TASK_OK = 0,
@@ -40,65 +41,21 @@ Task_Status_t Task_Test_SPI(void);																// Задача проверк
 
 int main()
 {
-	Task_Status_t Program_Status = TASK_OK;
-	/** Включение периферии *******************************************************************************************/
+    // установка частоты процессора 168 МГц
+    Clock_Config_168MHz_HSI();
+
 	Task_Enable_Peripherals();
 
-	/** Проверка работоспособности модуля I2C1: чтение из памяти, запись в память *************************************/
-	//if (Task_Test_I2C() != TASK_OK) Program_Status = TASK_ERROR;
-
-	//printf("%d\n", Program_Status);
-
-	/** Проверка работоспособности модуля SPI2: чтение из памяти, стирание памяти, запись в память ********************/
-    //Task_Test_SPI();
-
-	/** Проверка работоспособности модуля USART3 (подключен модуль генератора сигналов AD9833) ************************/
-
-	char message[] = "USART3 connected \r\n";
-	USART_Transmit(USART3, message, strlen(message));
-
-	// Создание экземпляра выходного сигнала, инициализация начальных параметров
-	Signal_Parameters Output_Signal;
-	Output_Signal.frequency = 123;
-	Output_Signal.amplitude = 64;
-	Output_Signal.wave_form = 2;
-
-	// Включение генератора AD9833, выходной сигнал имеет параметры 1 кГц, 50% амплитуда, синусоида
-	AD9833_Module_Init(SPI1, &Output_Signal);
-
-	char BUFFER_USART[MAX_BUFFER_SIZE];				// Строка, хранящая еще не отфильтрованный от возможного мусора буфер USART
-	char BUFFER_USART_FILTERED[MAX_BUFFER_SIZE];	// Отфильтрованный буфер USART
-
-    /**************** Основной цикл: мигание светодиодов и обработка нажатий кнопки ***********************************/
-	/** Основной цикл теперь будет содержать не только моргание светодиодами и обработку нажатий кнопки,
-		но и прием/передачу команд для генератора сигналов через USART */
-
-	uint32_t blink_ms = get_current_ms();
+    uint32_t start_blink = get_current_ms();
 	while (1)
 	{
-		// Пока ничего не пришло по USART выполняются задачи индикатора, LED и AD9833 по выполнению команд
-		while (!(USART3->SR & USART_SR_RXNE))
-		{
-			if (is_time_passed_ms(blink_ms, 100))
-			{
-				GPIO_toggle_Pin(GPIOD, 14);
-				blink_ms = get_current_ms();
-			}
+        if (is_time_passed_ms(start_blink, 1000))
+        {
+            GPIO_toggle_Pin(GPIOD, 12);
+            start_blink = get_current_ms();
+        }
 
 
-			if (TASK_OK != Task_Indicator(REFRESH_PERIOD)) Program_Status = TASK_ERROR;						// Задача индикатора должна выполняться каждые 10 мс
-			Task_Press_Button();								// Задача обработки нажатий кнопки
-			//Task_LED_Blink(Blink_Period);						// Задача моргания LED должна выполняться каждые 100/200/500 мс
-			if (TASK_OK != Task_AD9833_ExecuteCommand(&Output_Signal, 100)) Program_Status = TASK_ERROR;;	// Каждые 100 мс проверяется, есть ли что-то в очереди команд AD9833
-
-
-			if (Program_Status != TASK_OK) GPIO_set_HIGH(GPIOD, 14);
-
-		}
-
-		// Если что-то пришло в буфер USART выполнить задачи USART и AD9833 по парсингу новых команд
-		USART_Receive(USART3, BUFFER_USART, '!');
-		if (TASK_OK != Task_AD9833_GetCommand(BUFFER_USART, BUFFER_USART_FILTERED)) Program_Status = TASK_ERROR;
 	}
 }
 
@@ -367,7 +324,7 @@ void Task_Enable_Peripherals(void)
 		CLK ----------> PA5 (SPI1_SCK)
 		DAT ----------> PA7 (SPI1_MOSI)
 	*/
-
+/*
 	GPIO_Enable_SPI(SPI1, GPIOA, 5);	// Определение PA5 как SPI1_SCK
 	GPIO_Enable_SPI(SPI1, GPIOA, 7);	// Определение PA7 как SPI1_MOSI
 
@@ -376,6 +333,7 @@ void Task_Enable_Peripherals(void)
 
 	SPI_Init_Mode_2(SPI1);		// Включение SPI1 (Mode 2: CPOL 1 CPHA 0)
 	AD9833_Reset(SPI1);			// Сброс генератора
+*/
 }
 
 // Проверка работоспособности модуля I2C

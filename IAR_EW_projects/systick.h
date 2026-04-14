@@ -48,4 +48,6 @@ void delay_ms(uint32_t ms);
 	*/
 void SysTick_Handler(void);
 
+void Clock_Config_168MHz_HSI(void);
+
 #endif /*__SYSTICK_H__ */
