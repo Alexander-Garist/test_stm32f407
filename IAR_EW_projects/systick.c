@@ -8,14 +8,16 @@
 #include "CMSIS/stm32f4xx.h"
 
 /** Defines ***********************************************************************************************************/
-#define SysTick_FREQUENCY	SystemCoreClock                     // Тактовая частота (168 МГц) => 1с == 168.000.000 тактов
+#define SysTick_FREQUENCY	SystemCoreClock                     // Тактовая частота (168 МГц) => 1с == 168.000.000 тактов, 1 такт = 5,95 нс
 #define ms_per_interrupt	50									// Период прерываний SysTick в мс
 #define ticks_per_ms		(SysTick_FREQUENCY / 1000)			// Количество тактов за 1 мс (168.000)
+#define ticks_per_us		(SysTick_FREQUENCY / 1000000)       // Количество тактов за 1 мкс (168)
 #define LOAD_max_val		(ticks_per_ms * ms_per_interrupt)	// Значение LOAD (8.400.000)
 
 /** Variables *********************************************************************************************************/
-volatile uint32_t systick_counter = 0;      // Счетчик вызовов SysTick_Handler()
-static uint32_t ms_counter = 0;				// Счетчик миллисекунд
+volatile uint32_t systick_counter = 0;  // Счетчик вызовов SysTick_Handler()
+static uint32_t ms_counter = 0;         // Счетчик миллисекунд
+static uint32_t us_counter = 0;         // Счетчик микросекунд
 
 /** Functions *********************************************************************************************************/
 
@@ -74,6 +76,47 @@ static void SysTick_Update_ms(void)
     }
 }
 
+// Обновление счетчика микросекунд
+static void SysTick_Update_us(void)
+{
+    static uint32_t accumulated_ticks = 0;
+    uint32_t current_val = SysTick->VAL;
+
+    // Вместо магического числа используем статический флаг для первой инициализации
+    static uint32_t last_VAL = 0;
+    static uint8_t is_first_run = 1;
+
+    // В этот блок программа зайдет только 1 раз, чтобы установить last_VAL
+    if (is_first_run)
+    {
+        last_VAL = current_val;
+        is_first_run = 0;
+        return;
+    }
+
+    uint32_t elapsed_ticks;
+
+    if (current_val <= last_VAL)
+    {
+        elapsed_ticks = last_VAL - current_val;
+    }
+    else
+    {
+        elapsed_ticks = (LOAD_max_val - current_val) + last_VAL;
+    }
+
+    accumulated_ticks += elapsed_ticks;
+    last_VAL = current_val;
+
+    // Обновление счетчика мкс
+    if (accumulated_ticks >= ticks_per_us)
+    {
+        uint32_t us_to_add = accumulated_ticks / ticks_per_us;
+        us_counter += us_to_add;
+        accumulated_ticks %= ticks_per_us;
+    }
+}
+
 // Получение текущего системного времени в мс
 uint32_t get_current_ms(void)
 {
@@ -81,11 +124,25 @@ uint32_t get_current_ms(void)
 	return ms_counter;
 }
 
+// Получение текущего системного времени в мкс
+uint32_t get_current_us(void)
+{
+	SysTick_Update_us();
+	return us_counter;
+}
+
 // Неблокирующая задержка в мс
 uint32_t is_time_passed_ms(uint32_t start_time_ms, uint32_t delay_time_ms)
 {
 	SysTick_Update_ms();
 	return (ms_counter - start_time_ms) >= delay_time_ms;
+}
+
+// Неблокирующая задержка в мкс
+uint32_t is_time_passed_us(uint32_t start_time_us, uint32_t delay_time_us)
+{
+	SysTick_Update_us();
+	return (us_counter - start_time_us) >= delay_time_us;
 }
 
 // Блокирующая задержка в мс
@@ -97,6 +154,43 @@ void delay_ms(uint32_t ms)
 		SysTick_Update_ms();
 	}
 }
+
+// Блокирующая задержка в мкс
+void delay_us(uint32_t us)
+{
+    uint32_t startTime = us_counter;
+    while ((us_counter - startTime) < us)
+	{
+		SysTick_Update_us();
+	}
+}
+
+// Блокирующая задержка в тактах процессора
+void delay_ticks(uint32_t ticks)
+{
+    uint32_t start = SysTick->VAL;
+    uint32_t load = SysTick->LOAD;
+    uint32_t accumulated = 0;
+    uint32_t previous = start;
+
+    while (accumulated < ticks) {
+        uint32_t current = SysTick->VAL;
+
+        if (current <= previous) {
+            // Обычный случай: счетчик уменьшился
+            accumulated += (previous - current);
+        } else {
+            // Произошел перезапуск (переход через 0 к LOAD)
+            accumulated += (previous + (load - current));
+        }
+        previous = current;
+    }
+}
+
+
+
+
+
 
 // Обработчик прерываний системного таймера
 void SysTick_Handler(void)

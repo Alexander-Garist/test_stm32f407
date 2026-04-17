@@ -23,6 +23,7 @@ void SysTick_Init();
 	return: текущее значение счетчика миллисекунд.
 	*/
 uint32_t get_current_ms(void);
+uint32_t get_current_us(void);
 
 	/**
 	! Функция is_time_passed_ms определяет, прошло ли заданное время delay_time_ms неблокирующей задержки от момента
@@ -31,16 +32,16 @@ uint32_t get_current_ms(void);
 	- delay_time_ms - время задержки в миллисекундах.
 	return: прошло ли заданное время в мс.
 	*/
-uint32_t is_time_passed_ms(
-	uint32_t	start_time_ms,
-	uint32_t	delay_time_ms
-);
+uint32_t is_time_passed_ms(uint32_t	start_time_ms, uint32_t	delay_time_ms);
+uint32_t is_time_passed_us(uint32_t	start_time_us, uint32_t	delay_time_us);
 
 	/**
 	! Функция delay_ms создает блокирующую задержку. Внутри реализации функции присутствует вызов SysTick_Update_ms.
 	- ms - продолжительность блокирующей задержки в миллисекундах.
 	*/
 void delay_ms(uint32_t ms);
+void delay_us(uint32_t us);
+void delay_ticks(uint32_t ticks);   // Блокирующая задержка в тактах процессора
 
 	/**
 	! Функция SysTick_Handler является обработчиком прерывания SysTick.
