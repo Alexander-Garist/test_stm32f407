@@ -4,6 +4,10 @@
 #include "gpio.h"
 
 /***************************  Определение пинов GPIO в качестве пинов программного SWD  *******************************/
+// PC3 => Target RESET
+#define SOFT_SWD_TARGET_RESET_PORT  GPIOC
+#define SOFT_SWD_TARGET_RESET_PIN   3
+
 // PA1 => SWDIO
 #define SOFT_SWD_DATA_PORT          GPIOA
 #define SOFT_SWD_DATA_PIN           1
@@ -11,10 +15,6 @@
 // PA3 => SWCLK
 #define SOFT_SWD_CLK_PORT           GPIOA
 #define SOFT_SWD_CLK_PIN            3
-
-// PC3 => Target RESET
-#define SOFT_SWD_TARGET_RESET_PORT  GPIOC
-#define SOFT_SWD_TARGET_RESET_PIN   3
 /**********************************************************************************************************************/
 
 
@@ -31,6 +31,15 @@
 
 
 /***********************  Настройка пина SWDIO на Input/Output   ******************************************************/
+
+
+typedef enum
+{
+    Master_Input = 0,
+    Master_Output = 1
+}
+SoftSWD_Direction;
+
 #define SOFT_SWD_DATA_SET_INPUT()                                               \
 {                                                                               \
     SOFT_SWD_DATA_PORT->MODER &= ~(MODER_ANALOG << (SOFT_SWD_DATA_PIN * 2));    \
@@ -46,19 +55,19 @@
 
 /******************************** Определение частоты программного SWD ************************************************/
 #define SOFT_SWD_DELAY_TICKS(x)     for (uint32_t i = 0; i < x; i++) { __NOP(); }
-#define SOFT_SWD_TICK_DURATION      500
+#define SOFT_SWD_TICK_DURATION      20       // Продолжительность 1 такта программного SWD в 20 единиц => 1.2 МГц SWD
 /**********************************************************************************************************************/
 
 
-/********************************* Базовые функции чтения/записи 1 бита ***********************************************/
+/*********************************** Низкоуровненвые функции  *********************************************************/
 
 // Пустой такт без изменения состояния линии SWDIO
 #define SOFT_SWD_CLOCK_CYCLE()                                          \
 {                                                                       \
-    SOFT_SWD_CLK_LOW();                                                 \
     SOFT_SWD_DELAY_TICKS(SOFT_SWD_TICK_DURATION / 2);                   \
     SOFT_SWD_CLK_HIGH();                                                \
     SOFT_SWD_DELAY_TICKS(SOFT_SWD_TICK_DURATION / 2);                   \
+    SOFT_SWD_CLK_LOW();                                                 \
 }
 
 // Передача 1 бита данных
@@ -76,10 +85,9 @@
 #define SOFT_SWD_READ_BIT(bit)                                          \
 {                                                                       \
     SOFT_SWD_DELAY_TICKS(SOFT_SWD_TICK_DURATION / 2);                   \
+    bit = (SOFT_SWD_DATA_PORT->IDR & (1U << SOFT_SWD_DATA_PIN)) ? 1 : 0;\
     SOFT_SWD_CLK_HIGH();                                                \
     SOFT_SWD_DELAY_TICKS(SOFT_SWD_TICK_DURATION / 2);                   \
-    bit = (SOFT_SWD_DATA_PORT->IDR & (1U << SOFT_SWD_DATA_PIN)) ? 1 : 0;\
-    SOFT_SWD_DELAY_TICKS(SOFT_SWD_TICK_DURATION / 4);                   \
     SOFT_SWD_CLK_LOW();                                                 \
 }
 
@@ -97,7 +105,7 @@
 /**********************************************************************************************************************/
 
 
-/***************************** Управляющие последовательности бит *****************************************************/
+/***************************** Управление линией программного SWD *****************************************************/
 #define SOFT_SWD_JTAG_TO_SWD    (0xE79E)    // Запрос на переключение порта отладки таргета с JTAG на SWD (у некоторых МК по умолчанию подключен JTAG)
 
 // Сброс линии SWD (нужен перед началом работы для синхронизации программатора и таргета)
@@ -123,28 +131,11 @@
 #define SOFT_SWD_RESET()            \
 {                                   \
     SOFT_SWD_RESET_TARGET_LOW();    \
+    SOFT_SWD_DELAY_TICKS(50000);    \
     SOFT_SWD_RESET_TARGET_HIGH();   \
-    SOFT_SWD_DELAY_TICKS(50000000);   \
 }
 
 /**********************************************************************************************************************/
-
-
-
-
-
-
-
-
-
-
-
-
-
-#define SOFT_SWD_CYCLE_DURATION         (10)                             // Продолжительность 1 такта soft_SWD в микросекундах
-#define SOFT_SWD_LINE_RESET_DURATION    (50 * SOFT_SWD_CYCLE_DURATION)  // Продолжительность сброса линии SWD (минимум 50 тактов линия данных в состоянии 1)
-
-
 
 #define SOFT_SWD_REQ_START    (1 << 0)  // Всегда 1
 #define SOFT_SWD_REQ_AP       (1 << 1)  // 1 для AP, 0 для DP
@@ -163,14 +154,48 @@
     SOFT_SWD_REQ_STOP | \
     SOFT_SWD_REQ_PARK \
 )
-
+/** Инициализация программного SWD, включение тактирования портов GPIO, на которых реализованы SWDIO, SWCLK, SWRST;
+*       конфигурация пинов SoftSWD */
 void SoftSWD_Init();
+
+/** Программный сброс линии SWD (50 тактов, во время которых на линии данных логическая 1). Нужен для синхронизации
+*       ведущего и ведомого устройств */
 void SoftSWD_Line_Reset();
+
+/** Отправка управляющей последовательности для переключения отладчика в режим SWD */
 void SoftSWD_JTAGtoSWD();
-void SoftSWD_Target_Reset();
+
+/** Отправка 1 бита данных. */
 void SoftSWD_WriteBit(uint8_t bit);
+
+/** Отправка 1 байта данных */
+void SoftSWD_WriteByte(uint8_t byte);
+
+/** Прием 1 бита данных */
 uint8_t SoftSWD_ReadBit();
-void SoftSWD_TurnAround();
-uint32_t SoftSWD_ReadIDCODE(void);
+
+/** Прием 3 бит подтверждения ACK.
+*       0x1 - ACK OK
+*       0x2 - ACK WAIT
+*       0x4 - ACK FAIL
+*/
+uint8_t SoftSWD_ReadACK();
+
+/** Переключение линии в режим получения данных от ведомого устройства */
+void SoftSWD_Trn_Input();
+
+/** Переключение линии в режим передачи данных ведомому устройству */
+void SoftSWD_Trn_Output();
+
+/** Переключение направления линии данных */
+void SoftSWD_Trn();
+
+/******************* Функции для работы с пакетами данных *************************************************************/
+// формирование пакета
+// отправка пакета
+
+void SoftSWD_Connect();
+
+
 
 #endif /* __SOFT_SWD_H__ */

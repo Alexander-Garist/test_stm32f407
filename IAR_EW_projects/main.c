@@ -47,54 +47,60 @@ int main()
     uint8_t bit = 0x0;
     uint8_t ACK = 0x0;
 
+/** Синхронизация хоста с таргетом, переключение на SWD
+*       Т.к. синхронизация вынесена из цикла, то при переподключении таргета к мастеру нужно сбросить мастера
+*/
+    SoftSWD_Connect();
+
 	while (1)
 	{
         uint32_t idcode = 0;
         uint32_t data_parity = 0;
         ACK = 0x0;
 
-        // Синхронизация хоста с таргетом, переключение на SWD
-        SOFT_SWD_LINE_RESET();
-        SOFT_SWD_SWITCH_JTAG_TO_SWD();
-        SOFT_SWD_LINE_RESET();
+//        for(int i = 0; i < 10; i++) SoftSWD_WriteBit(0);
+        SoftSWD_WriteByte(0x00);
 
-        for(int i = 0; i < 10; i++) SOFT_SWD_WRITE_BIT(0);
+// Побитовая отправка запроса
+//        SoftSWD_WriteBit(1);
+//        SoftSWD_WriteBit(0);
+//        SoftSWD_WriteBit(1);
+//        SoftSWD_WriteBit(0);
+//        SoftSWD_WriteBit(0);
+//        SoftSWD_WriteBit(1);
+//        SoftSWD_WriteBit(0);
+//        SoftSWD_WriteBit(1);
 
-        // start byte
-        SOFT_SWD_WRITE_BIT(1);
-        SOFT_SWD_WRITE_BIT(0);
-        SOFT_SWD_WRITE_BIT(1);
-        SOFT_SWD_WRITE_BIT(0);
-        SOFT_SWD_WRITE_BIT(0);
-        SOFT_SWD_WRITE_BIT(1);
-        SOFT_SWD_WRITE_BIT(0);
-        SOFT_SWD_WRITE_BIT(1);
+        // Отправка байта запроса с учетом little-endian
+        SoftSWD_WriteByte(0xA5);
 
-        SOFT_SWD_TRN_TO_INPUT();
+        SoftSWD_Trn_Input();
 
-        SOFT_SWD_READ_BIT(bit);
-        ACK |= bit << 0;
+        ACK = SoftSWD_ReadACK();
 
-        SOFT_SWD_READ_BIT(bit);
-        ACK |= bit << 1;
-
-        SOFT_SWD_READ_BIT(bit);
-        ACK |= bit << 2;
+//        bit = SoftSWD_ReadBit();
+//        ACK |= bit << 0;
+//        bit = SoftSWD_ReadBit();
+//        ACK |= bit << 1;
+//        bit = SoftSWD_ReadBit();
+//        ACK |= bit << 2;
 
         // Читаем данные (32 бита)
         for (int i = 0; i < 32; i++)
         {
-            SOFT_SWD_READ_BIT(bit);
+            bit = SoftSWD_ReadBit();
             idcode |= (bit << i);
             data_parity++;
         }
-        uint8_t parity_bit;
-        SOFT_SWD_READ_BIT(parity_bit);
+        uint8_t parity_bit = SoftSWD_ReadBit();
 
-        SOFT_SWD_TRN_TO_OUTPUT();
+        SoftSWD_Trn_Output();
+        SoftSWD_WriteByte(0x00);
 
-        for(int i = 0; i < 10; i++) SOFT_SWD_WRITE_BIT(0);
+//        for(int i = 0; i < 10; i++) SoftSWD_WriteBit(0);
 
+        // горит синий: ACK == 0x1 OK
+        // горит красный: ACK != 0x1 что-то неправильно
         //printf("ACK = %d\n", ACK);
         if (ACK == 0x1) GPIO_set_HIGH(GPIOD, 15);
         else GPIO_set_HIGH(GPIOD, 14);
