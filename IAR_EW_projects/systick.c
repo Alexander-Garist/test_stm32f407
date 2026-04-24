@@ -187,11 +187,6 @@ void delay_ticks(uint32_t ticks)
     }
 }
 
-
-
-
-
-
 // Обработчик прерываний системного таймера
 void SysTick_Handler(void)
 {

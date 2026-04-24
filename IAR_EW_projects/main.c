@@ -1,9 +1,3 @@
-/**
-  * @file    main.c
-  * @brief   Основной файл проекта, содержит проверку работоспособности функций из разных модулей.
-  */
-
-/** Includes **********************************************************************************************************/
 #include <stdio.h>
 #include <string.h>
 
@@ -44,65 +38,85 @@ int main()
     SysTick_Init();
     SoftSWD_Init();
 
-    uint8_t bit = 0x0;
-    uint8_t ACK = 0x0;
+//    uint8_t bit = 0x0;
+//    uint8_t ACK = 0x0;
 
 /** Синхронизация хоста с таргетом, переключение на SWD
 *       Т.к. синхронизация вынесена из цикла, то при переподключении таргета к мастеру нужно сбросить мастера
 */
-    SoftSWD_Connect();
+//////    uint8_t ACK = SoftSWD_Connect();
+//////    SoftSWD_Trn();
+//////    if (ACK == 0x1) GPIO_set_HIGH(GPIOD, 12);
+
+    SoftSWD_Line_Reset();
+    SoftSWD_JTAGtoSWD();
+    SoftSWD_Line_Reset();
+
 
 	while (1)
 	{
-        uint32_t idcode = 0;
-        uint32_t data_parity = 0;
-        ACK = 0x0;
+//        uint32_t idcode1 = 0;
+        uint32_t idcode2 = 0;
+//        uint32_t data_parity = 0;
+//        ACK = 0x0;
 
-//        for(int i = 0; i < 10; i++) SoftSWD_WriteBit(0);
+        // параметры запроса, надо в хедере определить соответствующие дефайны
+        uint8_t DP_AP = 0x0;
+//        uint8_t RnW = 0x1;
+        uint8_t Addr = 0x0;
+
+        // работает с IDCODE
+        //idcode1 = SoftSWD_ReadRegister(DP_AP, 0x08);
+        idcode2 = SoftSWD_ReadRegister(DP_AP, Addr);
+/*
+        // собрать запрос
+        SoftSWD_Request req = SoftSWD_MakeRequest(DP_AP, RnW, Addr);
+
+        // отправить 1 байт нулей перед обменом
         SoftSWD_WriteByte(0x00);
 
-// Побитовая отправка запроса
-//        SoftSWD_WriteBit(1);
-//        SoftSWD_WriteBit(0);
-//        SoftSWD_WriteBit(1);
-//        SoftSWD_WriteBit(0);
-//        SoftSWD_WriteBit(0);
-//        SoftSWD_WriteBit(1);
-//        SoftSWD_WriteBit(0);
-//        SoftSWD_WriteBit(1);
+        // функция отправки запроса и получения ответа
+        ACK = SoftSWD_Send_Request_ACK(req);
 
-        // Отправка байта запроса с учетом little-endian
-        SoftSWD_WriteByte(0xA5);
-
-        SoftSWD_Trn_Input();
-
-        ACK = SoftSWD_ReadACK();
-
-//        bit = SoftSWD_ReadBit();
-//        ACK |= bit << 0;
-//        bit = SoftSWD_ReadBit();
-//        ACK |= bit << 1;
-//        bit = SoftSWD_ReadBit();
-//        ACK |= bit << 2;
-
-        // Читаем данные (32 бита)
+        // чтение данных 32 бита
         for (int i = 0; i < 32; i++)
         {
             bit = SoftSWD_ReadBit();
             idcode |= (bit << i);
-            data_parity++;
+            if (bit) data_parity++;
         }
+        data_parity %= 2;
         uint8_t parity_bit = SoftSWD_ReadBit();
 
-        SoftSWD_Trn_Output();
+        SoftSWD_Trn();  // обратное переключение в передачу от мастера к таргету
+
+        // отправить 1 байт нулей после обмена
         SoftSWD_WriteByte(0x00);
+*/
 
-//        for(int i = 0; i < 10; i++) SoftSWD_WriteBit(0);
 
-        // горит синий: ACK == 0x1 OK
+        #define READED_BYTES    2048
+        // Чтение из flash памяти таргета, прочитанные байты выводятся по порядку
+        uint8_t mem_data[READED_BYTES];
+        GPIO_set_HIGH(GPIOD, 12);
+        SoftSWD_ReadMemory(0x08000000, mem_data, READED_BYTES);
+        GPIO_set_LOW(GPIOD, 12);
+
+        for (uint32_t i = 0; i < READED_BYTES; i++)
+        {
+            printf("%02X  ", mem_data[i]);
+            if ((i - 7) % 8 == 0) printf("  ");
+            if ((i - 15) % 16 == 0) printf("\n");
+        }
+
+
+
+
+
+        // горит синий: ACK == 0x1 OK и четность прочитанная и посчитанная совпали
         // горит красный: ACK != 0x1 что-то неправильно
-        //printf("ACK = %d\n", ACK);
-        if (ACK == 0x1) GPIO_set_HIGH(GPIOD, 15);
+//        if ((ACK == 0x1) && (data_parity == parity_bit)) GPIO_set_HIGH(GPIOD, 15);
+        if (idcode2 == 0x2BA01477)GPIO_set_HIGH(GPIOD, 15);
         else GPIO_set_HIGH(GPIOD, 14);
         delay_ticks(500000);
         GPIO_set_LOW(GPIOD, 15);
