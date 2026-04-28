@@ -6,13 +6,13 @@
 SoftSWD_Direction Master_Direction = Master_Output;
 
 /***************************************************************************************** Настройка программного SWD */
-// Включение тактирования нужного порта GPIO
+/** Включение тактирования нужного порта GPIO */
 static void SoftSWD_RCC_Enable()
 {
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN;
 }
 
-// Настройка пинов программного SWD
+/** Настройка пинов программного SWD */
 static void SoftSWD_Pin_Enable()
 {
     /** CLK **/
@@ -59,7 +59,7 @@ static void SoftSWD_Pin_Enable()
 
 
 /******************************************************************************* Низкоуровневое управление пинами SWD */
-// Пустой такт
+/** Пустой такт */
 static void SoftSWD_Clock_Cycle()
 {
     delay_ticks(SOFT_SWD_TICK_DURATION);
@@ -68,41 +68,37 @@ static void SoftSWD_Clock_Cycle()
     SOFT_SWD_CLK_LOW();
 }
 
-// Переключить SWDIO на чтение из таргета
-static void SoftSWD_Trn_Input()
-{
-    Master_Direction = Master_Input;
-    SOFT_SWD_DATA_SET_INPUT();
-    SoftSWD_Clock_Cycle();
-}
-
-// Переключить SWDIO на запись в таргет
-static void SoftSWD_Trn_Output()
-{
-    Master_Direction = Master_Output;
-    SoftSWD_Clock_Cycle();
-    SOFT_SWD_DATA_SET_OUTPUT();
-}
-
-// Переключение направления линии данных
+/** Переключение направления линии данных */
 static void SoftSWD_Trn()
 {
-    if (Master_Direction)
+    if (Master_Direction == Master_Output)
     {
         Master_Direction = Master_Input;
-        SoftSWD_Trn_Input();
+        SOFT_SWD_DATA_SET_INPUT();
+        SoftSWD_Clock_Cycle();
     }
     else
     {
         Master_Direction = Master_Output;
-        SoftSWD_Trn_Output();
+        SoftSWD_Clock_Cycle();
+        SOFT_SWD_DATA_SET_OUTPUT();
+    }
+}
+
+/** Сброс линии SWD (нужен перед началом работы для синхронизации программатора и таргета) */
+static void SoftSWD_Line_Reset(void)
+{
+    SOFT_SWD_DATA_HIGH();
+    for (uint8_t i = 0; i < 50; i++)
+    {
+        SoftSWD_Clock_Cycle();
     }
 }
 /**********************************************************************************************************************/
 
 
 /******************************************************************************* Низкоуровневые функции чтения/записи */
-// Запись бита данных в SWD
+/** Запись бита данных в SWD */
 static void SoftSWD_WriteBit(uint8_t bit)
 {
     if (bit) SOFT_SWD_DATA_HIGH();
@@ -113,7 +109,7 @@ static void SoftSWD_WriteBit(uint8_t bit)
     SOFT_SWD_CLK_LOW();
 }
 
-// Чтение бита данных
+/** Чтение бита данных */
 static uint8_t SoftSWD_ReadBit()
 {
     uint8_t bit = 0;
@@ -126,7 +122,7 @@ static uint8_t SoftSWD_ReadBit()
     return bit;
 }
 
-// Запись байта данных
+/** Запись байта данных */
 static void SoftSWD_WriteByte(uint8_t byte)
 {
     for (uint8_t i = 0; i < 8; i++)
@@ -136,27 +132,33 @@ static void SoftSWD_WriteByte(uint8_t byte)
     }
 }
 
-// Запись 32 бит данных + 1 бит четности этих данных + 8 бит нулей для стабильности
+static void SoftSWD_Idle_Byte()
+{
+    SoftSWD_WriteByte(0x0);
+}
+
+/** Запись 32 бит данных + 1 бит четности этих данных + 8 бит нулей для стабильности */
 static void SoftSWD_WriteData(uint32_t data)
 {
     uint8_t parity_bit = 0;
+    uint32_t temp_data = data;
 
     // отправка 32 бит данных
     for (uint8_t i = 0; i < 32; i++)
     {
-        if (data & 0x1) parity_bit++;
-        SoftSWD_WriteBit(data & 0x1);
-        data >>= 0x1;
+        if (temp_data & 0x1) parity_bit++;
+        SoftSWD_WriteBit(temp_data & 0x1);
+        temp_data >>= 0x1;
     }
 
     // отправка бита четности
     SoftSWD_WriteBit(parity_bit % 2);
 
     // отправка 1 байта нулей
-    SoftSWD_WriteByte(0x0);
+    SoftSWD_Idle_Byte();
 }
 
-// Чтение 32 бит данных + 1 бита четности
+/** Чтение 32 бит данных + 1 бита четности */
 static uint32_t SoftSWD_ReadData()
 {
     uint32_t data = 0x0;
@@ -179,12 +181,25 @@ static uint32_t SoftSWD_ReadData()
     if (parity_bit == SoftSWD_ReadBit()) return data;
     else return 0xAAAABBBB;
 }
+
+/** Переключение линии в режим SWD */
+static void SoftSWD_JTAGtoSWD()
+{
+    uint16_t switch_seq = SOFT_SWD_JTAG_TO_SWD;
+    for (int i = 0; i < 16; i++)
+    {
+        SoftSWD_WriteBit(switch_seq & 0x01);
+        switch_seq >>= 1;
+    }
+}
+
+
 /**********************************************************************************************************************/
 
 
 /*************************************************************************** Функции для работы с запросами к таргету */
-// Формирование запроса
-static SoftSWD_Request SoftSWD_MakeRequest(uint8_t DP_AP, uint8_t RnW, uint8_t Addr)
+/** Формирование запроса используя структуру */
+static SoftSWD_Request SoftSWD_MakeRequest_WithStruct(uint8_t DP_AP, uint8_t RnW, uint8_t Register_Address)
 {
     SoftSWD_Request req;
     uint8_t parity = 0;
@@ -193,16 +208,16 @@ static SoftSWD_Request SoftSWD_MakeRequest(uint8_t DP_AP, uint8_t RnW, uint8_t A
     req.DP_AP = DP_AP;
     req.RnW = RnW;
 
-    req.Addr_3 = (Addr >> 3) & 0x01;
-    req.Addr_2 = (Addr >> 2) & 0x01;
+    req.Addr_3 = (Register_Address >> 3) & 0x01;
+    req.Addr_2 = (Register_Address >> 2) & 0x01;
 
     req.stop = 0;
     req.park = 1;
 
     if (DP_AP)              parity++;
     if (RnW)                parity++;
-    if (Addr & (0x1 << 2))  parity++;   // проверка 2 и 3 бита Addr => Addr нужно передавать в виде 0x0  0x4  0x8  0xC
-    if (Addr & (0x1 << 3))  parity++;   //                                                          0000 0100 1000 1100
+    if (Register_Address & (0x1 << 2))  parity++;
+    if (Register_Address & (0x1 << 3))  parity++;
 
     parity %= 2;
     req.parity = parity;
@@ -210,7 +225,24 @@ static SoftSWD_Request SoftSWD_MakeRequest(uint8_t DP_AP, uint8_t RnW, uint8_t A
     return req;
 }
 
-// Прием 3 бит подтверждения ACK.
+/** Формирование запроса используя битовые маски */
+static uint8_t SoftSWD_MakeRequest_WithMasks(uint8_t DP_AP, uint8_t RnW, uint8_t Register_Address)
+{
+    uint8_t req = REQUEST_BASE;
+    uint8_t parity = 0;
+
+    if (DP_AP_MASK(DP_AP)) parity++;
+    if (RnW_MASK(RnW)) parity++;
+    if (ADDR2_MASK(Register_Address)) parity++;
+    if (ADDR3_MASK(Register_Address)) parity++;
+    parity %= 2;
+
+    req |= DP_AP_MASK(DP_AP) | RnW_MASK(RnW) | ADDR2_MASK(Register_Address) | ADDR3_MASK(Register_Address) | PARITY_MASK(parity);
+
+    return req;
+}
+
+/** Прием 3 бит подтверждения ACK */
 static uint8_t SoftSWD_ReadACK()
 {
     uint8_t ack = 0x0;
@@ -221,9 +253,12 @@ static uint8_t SoftSWD_ReadACK()
     return ack;
 }
 
-// Отправка запроса от мастера к таргету
+/** Отправка запроса от мастера к таргету */
 static void SoftSWD_Send_Request(SoftSWD_Request req)
 {
+    // Направление должно быть OUTPUT
+    if (Master_Direction != Master_Output) SoftSWD_Trn();
+
     SoftSWD_WriteBit(req.start);
     SoftSWD_WriteBit(req.DP_AP);
     SoftSWD_WriteBit(req.RnW);
@@ -234,13 +269,13 @@ static void SoftSWD_Send_Request(SoftSWD_Request req)
     SoftSWD_WriteBit(req.park);
 }
 
-// Отправка запроса и получение подтверждения от таргета
+/** Отправка запроса и получение подтверждения от таргета */
 static uint8_t SoftSWD_Send_Request_ACK(SoftSWD_Request req)
 {
     uint8_t ACK = 0x0;
 
     // В любом случае направление должно быть OUTPUT в начале обмена с таргетом
-    if (Master_Direction == Master_Input) SoftSWD_Trn();
+    if (Master_Direction != Master_Output) SoftSWD_Trn();
 
     SoftSWD_Send_Request(req);      // отправка запроса
     SoftSWD_Trn();                  // переключение на прием
@@ -255,19 +290,20 @@ static uint8_t SoftSWD_Send_Request_ACK(SoftSWD_Request req)
 
 
 /****************************************************************************************** Работа с регистрами DP AP */
+/** Сброс ошибок (запись в регистр DP_ABORT) */
 static void SoftSWD_ClearErrors(void)
 {
-    SoftSWD_Request req = SoftSWD_MakeRequest(0, 0, 0x00);
+    SoftSWD_Request req = SoftSWD_MakeRequest_WithStruct(DP, WRITE, ADDR_ABORT);
     SoftSWD_Send_Request_ACK(req);
-    SoftSWD_WriteData(0x0000001E);
-    SoftSWD_WriteByte(0x0); // Idle
+    SoftSWD_WriteData(ORUNERRCLR | WDATAERR | STICKYERR | STICKYCMP);
+    // SoftSWD_WriteData(0x0000001E); магическое число
 }
 
-// Запись значения в регистр AP или DP
+/** Запись значения в регистр AP или DP */
 static void SoftSWD_WriteRegister(uint8_t DP_AP, uint8_t Addr, uint32_t register_value)
 {
-    SoftSWD_Request req = SoftSWD_MakeRequest(DP_AP, 0x0, Addr);    // запрос создан
-    SoftSWD_WriteByte(0x0);
+    SoftSWD_Request req = SoftSWD_MakeRequest_WithStruct(DP_AP, WRITE, Addr);    // запрос создан
+    SoftSWD_Idle_Byte();
     if (SoftSWD_Send_Request_ACK(req) == 0x1)                       // запрос отправлен, ACK получен
     {
         SoftSWD_WriteData(register_value);              // если ACK OK, то записывается значение в регистр
@@ -282,57 +318,13 @@ static void SoftSWD_WriteRegister(uint8_t DP_AP, uint8_t Addr, uint32_t register
         }
     }
 }
-/**********************************************************************************************************************/
 
-
-/**************************************************************************************** Работа с буфером данных SWD */
-// Разбить 32 бита в порядке little-endian на 4 байта
-static void parse_words(uint32_t data_word, uint8_t* buffer)
-{
-    buffer[0] = data_word & 0xFF;
-    buffer[1] = data_word >> 8 & 0xFF;
-    buffer[2] = data_word >> 16 & 0xFF;
-    buffer[3] = data_word >> 24 & 0xFF;
-}
-/**********************************************************************************************************************/
-
-
-
-/************************************************************************************************* ГЛОБАЛЬНЫЕ ФУНКЦИИ */
-// Инициализация программного SWD
-void SoftSWD_Init()
-{
-    SoftSWD_RCC_Enable();   // Включение тактирования нужного порта GPIO
-    SoftSWD_Pin_Enable();   // Настройка пинов программного SWD
-}
-
-// Сброс линии SWD (нужен перед началом работы для синхронизации программатора и таргета)
-void SoftSWD_Line_Reset(void)
-{
-    SOFT_SWD_DATA_HIGH();
-    for (uint8_t i = 0; i < 50; i++)
-    {
-        SoftSWD_Clock_Cycle();
-    }
-}
-
-// Переключение линии в режим SWD
-void SoftSWD_JTAGtoSWD()
-{
-    uint16_t switch_seq = SOFT_SWD_JTAG_TO_SWD;
-    for (int i = 0; i < 16; i++)
-    {
-        SoftSWD_WriteBit(switch_seq & 0x01);
-        switch_seq >>= 1;
-    }
-}
-
-// Чтение значения регистра AP или DP
-uint32_t SoftSWD_ReadRegister(uint8_t DP_AP, uint8_t Addr)
+/** Чтение значения регистра AP или DP */
+static uint32_t SoftSWD_ReadRegister(uint8_t DP_AP, uint8_t Addr)
 {
     uint32_t register_value = 0x0;
-    SoftSWD_Request req = SoftSWD_MakeRequest(DP_AP, 0x1, Addr);    // запрос создан
-    SoftSWD_WriteByte(0x0);
+    SoftSWD_Request req = SoftSWD_MakeRequest_WithStruct(DP_AP, READ, Addr);    // запрос создан
+    SoftSWD_Idle_Byte();
     if (SoftSWD_Send_Request_ACK(req) == 0x1)                       // запрос отправлен, ACK получен
         register_value = SoftSWD_ReadData();                        // если ACK OK, происходит чтение регистра
     else
@@ -342,34 +334,79 @@ uint32_t SoftSWD_ReadRegister(uint8_t DP_AP, uint8_t Addr)
         if (SoftSWD_Send_Request_ACK(req) == 0x1)  register_value = SoftSWD_ReadData();
     }
     SoftSWD_Trn();
-    SoftSWD_WriteByte(0x0);
+    SoftSWD_Idle_Byte();
     return register_value;
 }
+/**********************************************************************************************************************/
 
-// Чтение из памяти таргета (по указанному адресу памяти, заданное количество байт)
+
+/**************************************************************************************** Работа с буфером данных SWD */
+/** Разбить 32 бита в порядке little-endian на 4 байта */
+static void parse_words(uint32_t data_word, uint8_t* buffer)
+{
+    buffer[0] = data_word & 0xFF;
+    buffer[1] = data_word >> 8 & 0xFF;
+    buffer[2] = data_word >> 16 & 0xFF;
+    buffer[3] = data_word >> 24 & 0xFF;
+}
+
+/** Упаковка 4 байт в одно 32-битное слово */
+static uint32_t pack_words(uint8_t* buffer)
+{
+    uint32_t data = 0;
+    data |= (uint32_t)buffer[0];
+    data |= (uint32_t)buffer[1] << 8;
+    data |= (uint32_t)buffer[2] << 16;
+    data |= (uint32_t)buffer[3] << 24;
+    return data;
+}
+/**********************************************************************************************************************/
+
+
+
+/************************************************************************************************* ГЛОБАЛЬНЫЕ ФУНКЦИИ */
+/** Инициализация программного SWD */
+void SoftSWD_Init()
+{
+    SoftSWD_RCC_Enable();   // Включение тактирования нужного порта GPIO
+    SoftSWD_Pin_Enable();   // Настройка пинов программного SWD
+}
+
+/** Синхронизация мастера и таргета */
+void SoftSWD_Sync_Target()
+{
+    SoftSWD_Line_Reset();
+    SoftSWD_JTAGtoSWD();
+    SoftSWD_Line_Reset();
+}
+
+/** Получение 32-битного IDCODE таргета (чтение регистра DP_IDCODE) */
+uint32_t SoftSWD_Get_IDCODE()
+{
+    return (SoftSWD_ReadRegister(DP, ADDR_IDCODE));
+}
+
+/** Чтение из памяти таргета (по указанному адресу памяти, заданное количество байт) */
 void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size)
 {
-    SoftSWD_WriteRegister(0, 0x00, 0x0000001E); // DP ABORT
-    SoftSWD_WriteRegister(0, 0x04, 0x50000000); // CTRL/STAT
-    SoftSWD_WriteRegister(0, 0x08, 0x00000000); // AP 0, Bank 0
+    SoftSWD_ClearErrors();
+    SoftSWD_WriteRegister(DP, ADDR_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);  // CTRL/STAT
+    SoftSWD_WriteRegister(DP, ADDR_SELECT, 0x00000000);     // AP 0, Bank 0
 
     // AP 0, Addr 0x00 (CSW). Значение 0x23000002
-    SoftSWD_WriteRegister(1, 0x00, 0x23000012);
+    SoftSWD_WriteRegister(AP, ADDR_CSW, 0x23000012);
 
     // 1. запись адреса в TAR (AP 0x04)
-    SoftSWD_WriteRegister(1, 0x04, address);
+    SoftSWD_WriteRegister(AP, ADDR_TAR, address);
 
     // 2. запуск чтения через DRW (AP 0x0C)
-    SoftSWD_ReadRegister(1, 0x0C);
+    SoftSWD_ReadRegister(AP, ADDR_DRW);
 
     // 3. определить сколько операций чтения по 32 бита будет
-    uint32_t operations = size / 4;// за 1 раз читаются 4 байта
+    uint32_t operations = size / 4; // за 1 раз читаются 4 байта
 
     // можно читать количество байт, не кратное 4, тогда последней операцией чтения нужно забрать эти оставшиеся байты
-    if (size % 4)
-    {
-        operations++;
-    }
+    if (size % 4) operations++;
 
     uint32_t flash_word;    // переменная, в которую считываются 4 байта из регистра RDBUFF
     for (uint32_t i = 0; i < operations; i++)
@@ -377,15 +414,44 @@ void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size)
         // Если это не последнее слово, читается DRW, чтобы произошел автоинкремент
         if (i < operations - 1)
         {
-            flash_word = SoftSWD_ReadRegister(1, 0x0C);
+            flash_word = SoftSWD_ReadRegister(AP, ADDR_DRW);
         }
         else
         {
             // Последнее слово просто забрать из RDBUFF
-            flash_word = SoftSWD_ReadRegister(0, 0x0C);
+            flash_word = SoftSWD_ReadRegister(DP, ADDR_RDBUFF);
         }
 
         // Записать в буфер со смещением
         parse_words(flash_word, buffer + (i * 4));
+    }
+}
+
+/** Запись в память (RAM) таргета */
+void SoftSWD_WriteMemory(uint32_t address, uint8_t* buffer, uint32_t size)
+{
+    // 1. Стандартная подготовка (Сброс ошибок и питание)
+    //SoftSWD_WriteRegister(0, 0x00, 0x0000001E); // DP ABORT
+    SoftSWD_WriteRegister(0, 0x04, 0x50000000); // CTRL/STAT
+    SoftSWD_WriteRegister(0, 0x08, 0x00000000); // AP 0, Bank 0
+
+    // 2. Настройка CSW: 32-bit + Auto-increment (0x23000012)
+    SoftSWD_WriteRegister(1, 0x00, 0x23000012);
+
+    // 3. Установка начального адреса в TAR (AP 0x04)
+    SoftSWD_WriteRegister(1, 0x04, address);
+
+    // 4. Определение количества 32-битных слов
+    uint32_t operations = size / 4;
+    if (size % 4) operations++; // Округляем вверх, если байты не кратны 4
+
+    // 5. Цикл записи
+    for (uint32_t i = 0; i < operations; i++)
+    {
+        // Упаковка байт из буфера в 32-битное слово
+        uint32_t data_to_write = pack_words(buffer + (i * 4));
+
+        // Запись в DRW (AP 0x0C). Автоинкремент TAR происходит сразу после каждой успешной транзакции данных.
+        SoftSWD_WriteRegister(1, 0x0C, data_to_write);
     }
 }

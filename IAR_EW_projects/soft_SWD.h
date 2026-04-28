@@ -3,7 +3,7 @@
 
 #include "gpio.h"
 
-/***************************  Определение пинов GPIO в качестве пинов программного SWD  *******************************/
+/********************************************************** Определение пинов GPIO в качестве пинов программного SWD  */
 // PC3 => Target RESET
 #define SOFT_SWD_TARGET_RESET_PORT  GPIOC
 #define SOFT_SWD_TARGET_RESET_PIN   3
@@ -18,7 +18,7 @@
 /**********************************************************************************************************************/
 
 
-/*************************  Управление состоянием пинов программного SWD  *********************************************/
+/********************************************************************** Управление состоянием пинов программного SWD  */
 #define SOFT_SWD_DATA_HIGH()    (SOFT_SWD_DATA_PORT->BSRR = (0x1 << SOFT_SWD_DATA_PIN))
 #define SOFT_SWD_DATA_LOW()     (SOFT_SWD_DATA_PORT->BSRR = (0x1 << (SOFT_SWD_DATA_PIN + 16)))
 
@@ -30,7 +30,7 @@
 /**********************************************************************************************************************/
 
 
-/***********************  Настройка пина SWDIO на Input/Output   ******************************************************/
+/******************************************************************************* Настройка пина SWDIO на Input/Output */
 typedef enum
 {
     Master_Input = 0,
@@ -50,7 +50,11 @@ SoftSWD_Direction;
 }
 /**********************************************************************************************************************/
 
-#define SOFT_SWD_TICK_DURATION      (4)        // Продолжительность 1 такта SWD в тактах процессора
+
+/*********************************************************************************************************** Регистры */
+
+
+#define SOFT_SWD_TICK_DURATION      (4)         // Продолжительность 1 такта SWD в тактах процессора
 #define SOFT_SWD_JTAG_TO_SWD        (0xE79E)    // Запрос на переключение порта отладки таргета с JTAG на SWD
 
 typedef struct
@@ -58,32 +62,146 @@ typedef struct
     uint8_t start   : 1;    // Стартовый бит всегда 1
     uint8_t DP_AP   : 1;    // Выбор: 0 - DP, 1 - AP
     uint8_t RnW     : 1;    // Выбор: 0 - write, 1 - read
-    uint8_t Addr_3  : 1;    // Адрес регистра DP или AP
     uint8_t Addr_2  : 1;    // Адрес регистра DP или AP
+    uint8_t Addr_3  : 1;    // Адрес регистра DP или AP
     uint8_t parity  : 1;    // Бит четности (количество 1 среди DP_AP, RnW, Addr)
     uint8_t stop    : 1;    // Стоповый бит всегда 0
     uint8_t park    : 1;    // Всегда 1
 }
 SoftSWD_Request;
 
-/********************************* Прототипы функций ******************************************************************/
+/** Основа любого запроса к таргету: биты start=1, stop=0, park=1 никогда не меняются */
+#define REQUEST_BASE                0x81    // 1000 0001
+
+/** Изменяемые биты запроса */
+// DP_AP
+#define DP_AP_BIT_POS               6
+#define DP_AP_MASK(bit)             (bit << DP_AP_BIT_POS)
+
+// RnW
+#define RnW_BIT_POS                 5
+#define RnW_MASK(bit)               (bit << RnW_BIT_POS)
+
+// Address
+#define ADDR2_BIT_POS               4
+#define ADDR2_MASK(reg_address)     (((reg_address >> 2) & 0x1) << ADDR2_BIT_POS)
+#define ADDR3_BIT_POS               3
+#define ADDR3_MASK(reg_address)     (((reg_address >> 3) & 0x1) << ADDR3_BIT_POS)
+
+// Parity
+#define PARITY_BIT_POS              2
+#define PARITY_MASK(parity)         (parity << PARITY_BIT_POS)   // ! Аргумент надо посчитать перед подстановкой в запрос!
+
+/** здесь будут определены маски для формирования запросов
+* запрос 8 бит: START  DP_AP  RnW  Address[2]  Address[3] Parity  Stop  Park
+* маска будет для бит DP_AP, RnW и Address
+* Пример: запись в WCR => RnW = 0, WCR => DP = 0 Address = 0x4 (0100)
+* итог: #define DP_WRITE_WCR (0 << DP_AP_BIT_POS) | (0 << RnW_BIT_POS) | (1 << ADDR2_BIT_POS) | (0 << ADDR3_BIT_POS)
+*/
+// DP_AP
+#define DP              0x0
+#define AP              0x1
+
+// RnW
+#define WRITE           0x0
+#define READ            0x1
+
+// REGISTER DP ADDRESS
+#define ADDR_ABORT      0x00
+#define ADDR_IDCODE     0x00
+#define ADDR_CTRL_STAT  0x04
+#define ADDR_WCR        0x04
+#define ADDR_SELECT     0x08
+#define ADDR_RESEND     0x08
+#define ADDR_RDBUFF     0x0C
+
+// REGISTER AP ADDRESS
+#define ADDR_CSW        0x00
+#define ADDR_TAR        0x04
+#define ADDR_DRW        0x0C
+#define ADDR_BD0        0x10
+#define ADDR_BD1        0x14
+#define ADDR_BD2        0x18
+#define ADDR_BD3        0x1C
+#define ADDR_CFG        0xF4
+#define ADDR_BASE       0xF8
+#define ADDR_IDR        0xFC
+
+
+/************************************************************************************* Маски для записи в регистры DP */
+
+/** Запись в DP_ABORT */
+#define ORUNERRCLR_Pos  4   // Сброс ошибки переполнения
+#define ORUNERRCLR      (0x1 << ORUNERRCLR_Pos)
+
+#define WDATAERR_Pos    3   // Сброс ошибки записи
+#define WDATAERR        (0x1 << WDATAERR_Pos)
+
+#define STICKYERR_Pos   2   // Сброс ошибки транзакции
+#define STICKYERR       (0x1 << STICKYERR_Pos)
+
+#define STICKYCMP_Pos   1   // Сброс ошибки сравнения
+#define STICKYCMP       (0x1 << STICKYCMP_Pos)
+
+#define DAPABORT_Pos    0   // Прервать выполнение операции
+#define DAPABORT        (0x1 << DAPABORT_Pos)
+
+/** Запись в DP_CTRL_STAT */
+#define CSYSPWRUPREQ_Pos    30  // Включение питания системы
+#define CSYSPWRUPREQ        (0x1 << CSYSPWRUPREQ_Pos)
+
+#define CDBGPWRUPREQ_Pos    28  // Включение питания модуля отладки
+#define CDBGPWRUPREQ        (0x1 << CDBGPWRUPREQ_Pos)
+
+#define CDBGRSTREQ_Pos      26  // Сброс модуля отладки
+#define CDBGRSTREQ          (0x1 << CDBGRSTREQ_Pos)
+
+
+/** Запись в DP_SELECT */
+#define APSEL_Pos           24  // Выбор текущего AP
+#define APSEL(x)            (x << APSEL_Pos)
+
+#define APBANKSEL_Pos       4   // Выбор активного регистрового блока выбранного AP
+#define APBANKSEL(x)        (x << APBANKSEL_Pos)
+
+#define CTRLSEL_Pos         0   // Выбор регистра DP по адресу 0x04 (после сброса значение 0 => DP_CTRL_STAT)
+#define CTRLSEL             (0x1 << CTRLSEL_Pos)    // Если установить 1, то будет выбран регистр DP_WCR
+
+/**********************************************************************************************************************/
+
+
+/************************************************************************************* Маски для записи в регистры AP */
+
+
+
+
+
+
+/**********************************************************************************************************************/
+
+
+/************************************************************************************************** Прототипы функций */
 
 /** Инициализация программного SWD, включение тактирования портов GPIO, на которых реализованы SWDIO, SWCLK, SWRST;
 *       конфигурация пинов SoftSWD */
 void SoftSWD_Init();
 
-/** Программный сброс линии SWD (50 тактов, во время которых на линии данных логическая 1). Нужен для синхронизации
-*       ведущего и ведомого устройств */
-void SoftSWD_Line_Reset();
+/** Синхронизировать между собой мастер и таргет */
+void SoftSWD_Sync_Target();
 
-/** Отправка управляющей последовательности для переключения отладчика в режим SWD */
-void SoftSWD_JTAGtoSWD();
-
-/** Чтение значения регистра AP или DP */
-uint32_t SoftSWD_ReadRegister(uint8_t DP_AP, uint8_t Addr);
-
-// Чтение из памяти таргета по адресу
+/** Чтение из памяти таргета:
+*       начиная с адреса address
+*       записывая в буфер buffer
+*       количество байт size
+ */
 void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size);
+
+/** Прочитать DP_IDCODE */
+uint32_t SoftSWD_Get_IDCODE();
+
+// Запись в память (RAM) таргета
+void SoftSWD_WriteMemory(uint32_t address, uint8_t* buffer, uint32_t size);
+
 
 #endif /* __SOFT_SWD_H__ */
 
