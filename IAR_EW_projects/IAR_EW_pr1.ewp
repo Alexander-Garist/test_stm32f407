@@ -2163,6 +2163,9 @@
             <name>$PROJ_DIR$\LED.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\nation_programmer.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\soft_SWD.h</name>
         </file>
         <file>
@@ -2203,6 +2206,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\LED.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\nation_programmer.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\soft_SWD.c</name>

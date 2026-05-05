@@ -21,7 +21,7 @@ static uint32_t us_counter = 0;         // Счетчик микросекунд
 
 /** Functions *********************************************************************************************************/
 
-// Инициализая системного таймера
+/** Инициализая системного таймера */
 void SysTick_Init()
 {
     SysTick->CTRL = 0;
@@ -35,7 +35,7 @@ void SysTick_Init()
                     |(0x1 << 0);    // Включение
 }
 
-// Обновление счетчика миллисекунд
+/** Обновление счетчика миллисекунд */
 static void SysTick_Update_ms(void)
 {
     static uint32_t accumulated_ticks = 0;
@@ -76,7 +76,7 @@ static void SysTick_Update_ms(void)
     }
 }
 
-// Обновление счетчика микросекунд
+/** Обновление счетчика микросекунд */
 static void SysTick_Update_us(void)
 {
     static uint32_t accumulated_ticks = 0;
@@ -117,35 +117,35 @@ static void SysTick_Update_us(void)
     }
 }
 
-// Получение текущего системного времени в мс
+/** Получение текущего системного времени в мс */
 uint32_t get_current_ms(void)
 {
 	SysTick_Update_ms();
 	return ms_counter;
 }
 
-// Получение текущего системного времени в мкс
+/** Получение текущего системного времени в мкс */
 uint32_t get_current_us(void)
 {
 	SysTick_Update_us();
 	return us_counter;
 }
 
-// Неблокирующая задержка в мс
+/** Неблокирующая задержка в мс */
 uint32_t is_time_passed_ms(uint32_t start_time_ms, uint32_t delay_time_ms)
 {
 	SysTick_Update_ms();
 	return (ms_counter - start_time_ms) >= delay_time_ms;
 }
 
-// Неблокирующая задержка в мкс
+/** Неблокирующая задержка в мкс */
 uint32_t is_time_passed_us(uint32_t start_time_us, uint32_t delay_time_us)
 {
 	SysTick_Update_us();
 	return (us_counter - start_time_us) >= delay_time_us;
 }
 
-// Блокирующая задержка в мс
+/** Блокирующая задержка в мс */
 void delay_ms(uint32_t ms)
 {
     uint32_t startTime = ms_counter;
@@ -155,7 +155,7 @@ void delay_ms(uint32_t ms)
 	}
 }
 
-// Блокирующая задержка в мкс
+/** Блокирующая задержка в мкс */
 void delay_us(uint32_t us)
 {
     uint32_t startTime = us_counter;
@@ -165,7 +165,7 @@ void delay_us(uint32_t us)
 	}
 }
 
-// Блокирующая задержка в тактах процессора
+/** Блокирующая задержка в тактах процессора */
 void delay_ticks(uint32_t ticks)
 {
     uint32_t start = SysTick->VAL;
@@ -187,12 +187,13 @@ void delay_ticks(uint32_t ticks)
     }
 }
 
-// Обработчик прерываний системного таймера
+/** Обработчик прерываний системного таймера */
 void SysTick_Handler(void)
 {
     systick_counter++;
 }
 
+/** Установка частоты процессора 168 МГц */
 void Clock_Config_168MHz_HSI(void)
 {
     // 1. Включаем HSI и ждем стабилизации
