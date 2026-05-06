@@ -5,20 +5,20 @@
 #include "soft_SWD.h"
 #include "LED.h"
 
-#define READED_BYTES    0x20
-#define SENDED_BYTES    0x20
-#define MEMORY_ADDRESS  0x20000900
+#define READED_BYTES    0x1000   // 2 КБ прочитать
+#define SENDED_BYTES    0x1000   // 2 КБ отправить
+#define MEMORY_ADDRESS  0x20004000
 
-// Вывести в терминал массив
-static void print_readed_data(uint8_t* readed_data, uint32_t size)
-{
-    for (uint32_t i = 0; i < size; i++)
-    {
-        printf("%02X  ", readed_data[i]);
-        if ((i - 7) % 8 == 0) printf("  ");
-        if ((i - 15) % 16 == 0) printf("\n");
-    }
-}
+//// Вывести в терминал массив
+//static void print_readed_data(uint8_t* readed_data, uint32_t size)
+//{
+//    for (uint32_t i = 0; i < size; i++)
+//    {
+//        printf("%02X  ", readed_data[i]);
+//        if ((i - 7) % 8 == 0) printf("  ");
+//        if ((i - 15) % 16 == 0) printf("\n");
+//    }
+//}
 
 // Заполнить массив последовательными числами
 static void fill_sended_buffer(uint8_t* sended_data, uint32_t size)
@@ -87,10 +87,11 @@ int main()
         else
         {
             GPIO_set_HIGH(GPIOD, 15);
-            if (compare_sended_readed(sended_data, readed_data, READED_BYTES)) GPIO_set_HIGH(GPIOD, 14);
+            if (compare_sended_readed(sended_data, readed_data, READED_BYTES))
+            { GPIO_set_HIGH(GPIOD, 14); }
             else GPIO_set_HIGH(GPIOD, 12);
         }
-        delay_ticks(500000);
+        delay_ms(1000);
         LED_turnOFF_4_LED();
 	}
 }

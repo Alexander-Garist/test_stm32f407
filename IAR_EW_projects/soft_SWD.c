@@ -304,22 +304,69 @@ static void SoftSWD_ClearErrors(void)
     SoftSWD_WriteData(ORUNERRCLR | WDATAERR | STICKYERR | STICKYCMP);
 }
 
+///** Запись значения в регистр AP или DP */
+//static void SoftSWD_WriteRegister(uint8_t DP_AP, uint8_t Addr, uint32_t register_value)
+//{
+//    SoftSWD_Request req = SoftSWD_MakeRequest_WithStruct(DP_AP, WRITE, Addr);       // Запрос сформирован
+//    SoftSWD_Idle_Byte();                                                            // Отправка 8 бит нулей перед отправкой запроса
+//    if (SoftSWD_Send_Request_ACK(req) == 0x1)           // Запрос отправлен, ACK получен
+//    {
+//        SoftSWD_WriteData(register_value);              // если ACK OK, то записывается значение в регистр
+//    }
+//    else
+//    {
+//        // Сбросить ошибки и попробовать еще 1 раз
+//        SoftSWD_ClearErrors();
+//        if (SoftSWD_Send_Request_ACK(req) == 0x1)
+//        {
+//            SoftSWD_WriteData(register_value);
+//        }
+//    }
+//}
+
+
 /** Запись значения в регистр AP или DP */
 static void SoftSWD_WriteRegister(uint8_t DP_AP, uint8_t Addr, uint32_t register_value)
 {
-    SoftSWD_Request req = SoftSWD_MakeRequest_WithStruct(DP_AP, WRITE, Addr);    // запрос создан
-    SoftSWD_Idle_Byte();
-    if (SoftSWD_Send_Request_ACK(req) == 0x1)                       // запрос отправлен, ACK получен
+    SoftSWD_Request req = SoftSWD_MakeRequest_WithStruct(DP_AP, WRITE, Addr);       // Запрос сформирован
+    SoftSWD_Idle_Byte();                                                            // Отправка 8 бит нулей перед отправкой запроса
+
+    switch (SoftSWD_Send_Request_ACK(req))
     {
-        SoftSWD_WriteData(register_value);              // если ACK OK, то записывается значение в регистр
-    }
-    else
-    {
-        // Сбросить ошибки и попробовать еще 1 раз
-        SoftSWD_ClearErrors();
-        if (SoftSWD_Send_Request_ACK(req) == 0x1)
+        // В случае получения ACK_OK происходит запись в регистр как и планировалось
+        case SWD_ACK_OK:
         {
             SoftSWD_WriteData(register_value);
+            break;
+        }
+
+        // В случае получения ACK_WAIT необходимо повторить попытку записи в регистр, т.к. прямо сейчас таргет занят
+        case SWD_ACK_WAIT:
+        {
+            uint32_t attempts = 1000;
+            while (attempts)
+            {
+                attempts--;
+                if (SoftSWD_Send_Request_ACK(req) == SWD_ACK_OK)
+                {
+                    SoftSWD_WriteData(register_value);
+                    break;
+                }
+            }   // end while
+
+            // Если после нескольких попыток запись получилась, нужно выйти из switch, иначе произойдет переход в case SWD_ACK_FAIL
+            if (SoftSWD_Send_Request_ACK(req) == SWD_ACK_OK) break;
+        }   // end case SWD_ACK_WAIT
+
+        case SWD_ACK_FAIL:
+        {
+            // Сбросить ошибки и попробовать еще 1 раз
+            SoftSWD_ClearErrors();
+            if (SoftSWD_Send_Request_ACK(req) == SWD_ACK_OK)
+            {
+                SoftSWD_WriteData(register_value);
+            }
+            break;
         }
     }
 }
@@ -461,7 +508,6 @@ uint8_t SoftSWD_ConnectToTarget()
 /** Чтение из памяти таргета (по указанному адресу памяти, заданное количество байт) */
 void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size)
 {
-    //SoftSWD_ClearErrors();
     SoftSWD_WriteRegister(DP, ADDR_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);  // CTRL/STAT
     SoftSWD_WriteRegister(DP, ADDR_SELECT, 0x00000000);     // AP 0, Bank 0
 
@@ -503,7 +549,6 @@ void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size)
 void SoftSWD_Write_RAM(uint32_t address, uint8_t* buffer, uint32_t size)
 {
     // 1. Стандартная подготовка (Сброс ошибок и питание)
-    //SoftSWD_ClearErrors();
     SoftSWD_WriteRegister(DP, ADDR_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);     // CTRL/STAT
     SoftSWD_WriteRegister(DP, ADDR_SELECT, APSEL(0x0) | APBANKSEL(0x0));        // AP 0, Bank 0
 
