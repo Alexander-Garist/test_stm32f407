@@ -51,15 +51,19 @@ define block CSTACK    with alignment = 8, size = __ICFEDIT_size_cstack__   { };
 define block HEAP      with alignment = 8, size = __ICFEDIT_size_heap__     { };
 
 initialize by copy { readwrite };
-//initialize by copy with packing = none { section __DLIB_PERTHREAD }; // Required in a multi-threaded application
+keep { section FIRMWARE_SECTION };
 
 place at address mem:__ICFEDIT_intvec_start__ { readonly section .intvec };
 
-place in FLASH_region  { readonly };
+place in FLASH_region  { readonly, section FIRMWARE_SECTION };
 place in PCARD_region  { readonly section application_specific_ro };
 place in CCRAM_region  { section .ccram };
 place in SRAM_region   { readwrite, block HEAP };
 place in BKPR_region   { section .backup_sram };
 
-
-place at address mem: 0x20010000 { block CSTACK };  /** эта функция задает дно стека, т.е. его минимальный адрес, а в Stack Pointer будет адрес дна + размер стека */
+/** Эта функция задает дно стека, т.е. его минимальный адрес,
+*       а в Stack Pointer будет адрес дна + размер стека
+*       стек находится по адресам 0x20010000 - 0x2001BFFF
+*       Это конец региона SRAM1
+*/
+place at address mem: 0x20010000 { block CSTACK };

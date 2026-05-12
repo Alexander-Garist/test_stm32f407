@@ -225,9 +225,14 @@ void SoftSWD_Write_RAM(uint32_t address, uint8_t* buffer, uint32_t size);
 *       количество байт size
  */
 void SoftSWD_Write_Flash(uint32_t address, uint8_t* buffer, uint32_t size);
+void SoftSWD_ClearErrors(void);
 
 
+/** Запись в flash таргета */
+void SoftSWD_Write_FLASH(uint32_t address, uint8_t* buffer, uint32_t size);
 
+void SoftSWD_Erase_Flash(uint32_t address, uint32_t size);
+void SoftSWD_Halt_Target();
 #endif /* __SOFT_SWD_H__ */
 
 

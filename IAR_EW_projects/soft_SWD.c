@@ -297,7 +297,7 @@ static uint8_t SoftSWD_Send_Request_ACK(SoftSWD_Request req)
 /****************************************************************************************** Работа с регистрами DP AP */
 
 /** Сброс ошибок (запись в регистр DP_ABORT) */
-static void SoftSWD_ClearErrors(void)
+void SoftSWD_ClearErrors(void)
 {
     SoftSWD_Request req = SoftSWD_MakeRequest_WithStruct(DP, WRITE, ADDR_ABORT);
     SoftSWD_Send_Request_ACK(req);
@@ -355,7 +355,7 @@ static void SoftSWD_WriteRegister(uint8_t DP_AP, uint8_t Addr, uint32_t register
             }   // end while
 
             // Если после нескольких попыток запись получилась, нужно выйти из switch, иначе произойдет переход в case SWD_ACK_FAIL
-            if (SoftSWD_Send_Request_ACK(req) == SWD_ACK_OK) break;
+            if (SoftSWD_Send_Request_ACK(req) == SWD_ACK_OK) SoftSWD_WriteData(register_value); break;
         }   // end case SWD_ACK_WAIT
 
         case SWD_ACK_FAIL:
@@ -521,10 +521,7 @@ void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size)
     SoftSWD_ReadRegister(AP, ADDR_DRW);
 
     // 3. определить сколько операций чтения по 32 бита будет
-    uint32_t operations = size / 4; // за 1 раз читаются 4 байта
-
-    // можно читать количество байт, не кратное 4, тогда последней операцией чтения нужно забрать эти оставшиеся байты
-    if (size % 4) operations++;
+    uint32_t operations = (size + 3) / 4; // за 1 раз читаются 4 байта
 
     uint32_t flash_word;    // переменная, в которую считываются 4 байта из регистра RDBUFF
     for (uint32_t i = 0; i < operations; i++)
@@ -577,15 +574,109 @@ void SoftSWD_Write_RAM(uint32_t address, uint8_t* buffer, uint32_t size)
     if ((ctrl_stat >> 5) & 0x1) GPIO_set_HIGH(GPIOD, 14);
 }
 
-/** Запись в память (Flash) таргета */
-void SoftSWD_Write_Flash(uint32_t address, uint8_t* buffer, uint32_t size)
+#define FLASH_REG_BASE   0x40022000
+#define FLASH_REG_STS    (FLASH_REG_BASE + 0x0C)
+#define FLASH_REG_CTRL   (FLASH_REG_BASE + 0x10)
+#define FLASH_REG_ADDR   (FLASH_REG_BASE + 0x14)
+#define FLASH_REG_KEY    (FLASH_REG_BASE + 0x04)
+#define PAGE_SIZE        2048
+
+
+void SoftSWD_Erase_Flash(uint32_t address, uint32_t size)
 {
-    // разблокировать контроллер flash (по-разному у разных МК)
-    // очистить нужный блок/сектор
+    // 1. Включение питания и выбор порта
+    SoftSWD_WriteRegister(DP, ADDR_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);
+    SoftSWD_WriteRegister(DP, ADDR_SELECT, 0x00000000);
 
-    // эта функция должна будет реализовывать общий алгоритм записи в флеш память таргета, вызывая специфические функции для конкретного таргета STM32 или Nations
-    // тогда этот модуль SoftSWD должен включать в себя модули конкретных МК
+    // 2. Настройка шины на 32 бита (БЕЗ автоинкремента для управления регистрами)
+    SoftSWD_WriteRegister(AP, ADDR_CSW, 0x23000002);
 
+    // 3. Разблокировка Flash-контроллера (Unlock)
+    SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_KEY);
+    SoftSWD_WriteRegister(AP, ADDR_DRW, 0x45670123);
+    SoftSWD_WriteRegister(AP, ADDR_DRW, 0xCDEF89AB);
 
+    // 4. Стирание необходимого количества страниц
+    uint32_t num_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+    for (uint32_t p = 0; p < num_pages; p++)
+    {
+        uint32_t page_addr = address + (p * PAGE_SIZE);
+
+        // Включаем режим стирания страницы (PER)
+        SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_CTRL);
+        SoftSWD_WriteRegister(AP, ADDR_DRW, 0x00000002);
+
+        // Указываем адрес страницы
+        SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_ADDR);
+        SoftSWD_WriteRegister(AP, ADDR_DRW, page_addr);
+
+        // Запуск (PER + START)
+        SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_CTRL);
+        SoftSWD_WriteRegister(AP, ADDR_DRW, 0x00000042);
+
+        // Ожидание завершения BUSY
+        uint32_t status;
+        SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_STS);
+        do {
+            SoftSWD_ReadRegister(AP, ADDR_DRW);
+            status = SoftSWD_ReadRegister(DP, ADDR_RDBUFF);
+        } while (status & 0x01);
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+/** Запись в flash таргета */
+void SoftSWD_Write_FLASH(uint32_t address, uint8_t* buffer, uint32_t size)
+{
+    // Включение питания и выбор порта
+    SoftSWD_WriteRegister(DP, ADDR_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);
+    SoftSWD_WriteRegister(DP, ADDR_SELECT, 0x00000000);
+
+    // Настройка шины на 32 бита (БЕЗ автоинкремента для управления регистрами)
+    SoftSWD_WriteRegister(AP, ADDR_CSW, 0x23000002);
+
+    // Разблокировка Flash-контроллера (Unlock)
+    SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_KEY);
+    SoftSWD_WriteRegister(AP, ADDR_DRW, 0x45670123);
+    SoftSWD_WriteRegister(AP, ADDR_DRW, 0xCDEF89AB);
+
+    // Запись данных
+    // Режим программирования (PG)
+    SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_CTRL);
+    SoftSWD_WriteRegister(AP, ADDR_DRW, 0x00000001);
+
+    uint32_t operations = (size + 3) / 4;
+    for (uint32_t i = 0; i < operations; i++)
+    {
+        uint32_t data_to_write = pack_words(buffer + (i * 4));
+        uint32_t current_addr = address + (i * 4);
+
+        // Записываем слово данных
+        SoftSWD_WriteRegister(AP, ADDR_TAR, current_addr);
+        SoftSWD_WriteRegister(AP, ADDR_DRW, data_to_write);
+
+        // Ожидание BUSY (обязательно после каждого слова!)
+        uint32_t status;
+        SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_STS);
+        do {
+            SoftSWD_ReadRegister(AP, ADDR_DRW);
+            status = SoftSWD_ReadRegister(DP, ADDR_RDBUFF);
+        } while (status & 0x01);
+    }
+
+    // 6. Блокировка Flash (LOCK)
+    SoftSWD_WriteRegister(AP, ADDR_TAR, FLASH_REG_CTRL);
+    SoftSWD_WriteRegister(AP, ADDR_DRW, 0x00000080);
+}
+
 

@@ -800,11 +800,12 @@
                 </option>
                 <option>
                     <name>IlinkUseExtraOptions</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>IlinkExtraOptions</name>
-                    <state></state>
+                    <state>--image_input "$PROJ_DIR$\firmwares\target_n32g455_ram.bin",target_firm_RAM,FIRMWARE_SECTION,4</state>
+                    <state>--image_input "$PROJ_DIR$\firmwares\target_n32g455_flash.bin",target_firm_FLASH,FIRMWARE_SECTION,4</state>
                 </option>
                 <option>
                     <name>IlinkLowLevelInterfaceSlave</name>

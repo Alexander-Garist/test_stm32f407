@@ -5,31 +5,51 @@
 #include "soft_SWD.h"
 #include "LED.h"
 
-#define READED_BYTES    0x1000   // 2 КБ прочитать
-#define SENDED_BYTES    0x1000   // 2 КБ отправить
-#define MEMORY_ADDRESS  0x20004000
+#define FIRMWARE_SIZE           0x1180
+#define PAGE_SIZE               0x400
+#define TARGET_MEMORY_ADDRESS   0x08000000
 
-//// Вывести в терминал массив
-//static void print_readed_data(uint8_t* readed_data, uint32_t size)
-//{
-//    for (uint32_t i = 0; i < size; i++)
-//    {
-//        printf("%02X  ", readed_data[i]);
-//        if ((i - 7) % 8 == 0) printf("  ");
-//        if ((i - 15) % 16 == 0) printf("\n");
-//    }
-//}
+/********************* В файл линкера добавлено размещение 2 прошивок в flash память программатора ********************/
+extern uint8_t target_firm_RAM;
+uint8_t* firm_address_RAM = &target_firm_RAM;
 
-// Заполнить массив последовательными числами
-static void fill_sended_buffer(uint8_t* sended_data, uint32_t size)
+extern uint8_t target_firm_FLASH;
+uint8_t* firm_address_FLASH = &target_firm_FLASH;
+/**********************************************************************************************************************/
+
+// заполнить максимум 1 страницу 0x400 (1024 bytes)
+static void fill_sended_buffer(uint8_t* sended_data, uint32_t* sended_size)
 {
-    for (uint32_t i = 0; i < size; i++)
+    static uint8_t page_max_count = FIRMWARE_SIZE / PAGE_SIZE;
+    static uint8_t page_number = 0;                             // Номер отправляемой страницы
+    uint32_t address_offset = page_number * PAGE_SIZE;  // Сдвиг по адресу прошивки каждый раз на 1 страницу
+
+    if (page_number > page_max_count) { GPIO_set_HIGH(GPIOD, 13); return; }
+
+    if (FIRMWARE_SIZE - PAGE_SIZE < address_offset)
     {
-        sended_data[i] += (uint8_t)i;
+        // Записывается последняя неполная страница прошивки с текущим сдвигом
+        for (uint32_t i = 0; i < FIRMWARE_SIZE - address_offset; i++)
+        {
+            sended_data[i] = *(firm_address_FLASH + address_offset + i);
+        }
+
+        *sended_size = FIRMWARE_SIZE - address_offset;
+        page_number++;
+    }
+    else
+    {
+        // Записывается 1 страница прошивки с текущим сдвигом
+        for (uint32_t i = 0; i < PAGE_SIZE; i++)
+        {
+            sended_data[i] = *(firm_address_FLASH + address_offset + i);
+        }
+        *sended_size = PAGE_SIZE;
+        page_number++;
     }
 }
 
-// Проверить совпадают ли записанные данные с прочитанными (0 - совпадают, 1 - есть несовпадение)
+/** Проверить совпадают ли записанные данные с прочитанными (0 - совпадают, 1 - есть несовпадение) */
 static uint8_t compare_sended_readed(uint8_t* sended_data, uint8_t* readed_data, uint32_t size)
 {
     uint8_t result = 0;
@@ -44,37 +64,52 @@ static uint8_t compare_sended_readed(uint8_t* sended_data, uint8_t* readed_data,
     return result;
 }
 
+
+
 int main()
 {
     Clock_Config_168MHz_HSI();  // Разгон процессора до 168 МГц
     SysTick_Init();             // Инициализация системного таймера
 
     // Объявление буфера отправляемых данных и принимаемых данных
-    uint8_t sended_data[SENDED_BYTES] = { 0 };
-    uint8_t readed_data[READED_BYTES] = { 0 };
+    uint8_t sended_data[PAGE_SIZE] = { 0 };
+    uint8_t readed_data[PAGE_SIZE] = { 0 };
 
     SoftSWD_Init();             // Инициализация программного SWD
     SoftSWD_Sync_Target();      // Синхронизация хоста с таргетом
 
+    uint32_t sending_bytes = 0;
+
+    uint32_t current_offset = 0;
+
 	while (1)
 	{
-        //SoftSWD_Reset_Target();                         // Аппаратный сброс таргета для перезагрузки
+        //current_offset = 0;
+
         uint32_t idcode = SoftSWD_Get_IDCODE();         // Чтение IDCODE таргета
 
-        fill_sended_buffer(sended_data, SENDED_BYTES);  // Заполнение отправляемого буфера последовательными числами
+        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
+        SoftSWD_Erase_Flash(TARGET_MEMORY_ADDRESS, FIRMWARE_SIZE);
+        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
+        SoftSWD_Reset_Target();
 
-        // Сначала чтение из RAM по указанному адресу
-        SoftSWD_ReadMemory(MEMORY_ADDRESS, readed_data, READED_BYTES);
+        while (current_offset <= FIRMWARE_SIZE)
+        {
+            // Заполнение отправляемого буфера байтами прошивки таргета
+            fill_sended_buffer(sended_data, &sending_bytes);
 
-        // Затем запись по указанному адресу
-        SoftSWD_Write_RAM(MEMORY_ADDRESS, sended_data, SENDED_BYTES);
+            // Запись по указанному адресу
+            SoftSWD_Write_FLASH(TARGET_MEMORY_ADDRESS + current_offset, sended_data, sending_bytes);
 
-        // Повторное чтение для проверки успешности записи
-        SoftSWD_ReadMemory(MEMORY_ADDRESS, readed_data, READED_BYTES);
+            // Чтение для проверки успешности записи
+            SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS + current_offset, readed_data, sending_bytes);
 
-        // Вывод в терминал прочитанных байт
-        //print_readed_data(readed_data, READED_BYTES);
+            current_offset += PAGE_SIZE;
+        }
 
+        //SoftSWD_Reset_Target();
+        delay_ms(100);
+        SoftSWD_Reset_Target();
 
 
         /** Светодиоды:
@@ -84,14 +119,6 @@ int main()
         *   красный + синий: IDCODE считан правильно, проверка записи и чтения в память не прошла
         */
         if (idcode != 0x2BA01477) GPIO_set_HIGH(GPIOD, 14);
-        else
-        {
-            GPIO_set_HIGH(GPIOD, 15);
-            if (compare_sended_readed(sended_data, readed_data, READED_BYTES))
-            { GPIO_set_HIGH(GPIOD, 14); }
-            else GPIO_set_HIGH(GPIOD, 12);
-        }
-        delay_ms(1000);
-        LED_turnOFF_4_LED();
+        else GPIO_set_HIGH(GPIOD, 15);
 	}
 }
