@@ -2164,7 +2164,7 @@
             <name>$PROJ_DIR$\LED.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\nation_programmer.h</name>
+            <name>$PROJ_DIR$\N32G45x.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\soft_SWD.h</name>
@@ -2209,7 +2209,7 @@
             <name>$PROJ_DIR$\LED.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\nation_programmer.c</name>
+            <name>$PROJ_DIR$\N32G45x.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\soft_SWD.c</name>

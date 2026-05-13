@@ -107,25 +107,25 @@ SoftSWD_Request;
 #define READ            0x1
 
 // REGISTER DP ADDRESS
-#define ADDR_ABORT      0x00
-#define ADDR_IDCODE     0x00
-#define ADDR_CTRL_STAT  0x04
-#define ADDR_WCR        0x04
-#define ADDR_SELECT     0x08
-#define ADDR_RESEND     0x08
-#define ADDR_RDBUFF     0x0C
+#define DP_ABORT        0x00
+#define DP_IDCODE       0x00
+#define DP_CTRL_STAT    0x04
+#define DP_WCR          0x04
+#define DP_SELECT       0x08
+#define DP_RESEND       0x08
+#define DP_RDBUFF       0x0C
 
 // REGISTER AP ADDRESS
-#define ADDR_CSW        0x00
-#define ADDR_TAR        0x04
-#define ADDR_DRW        0x0C
-#define ADDR_BD0        0x10
-#define ADDR_BD1        0x14
-#define ADDR_BD2        0x18
-#define ADDR_BD3        0x1C
-#define ADDR_CFG        0xF4
-#define ADDR_BASE       0xF8
-#define ADDR_IDR        0xFC
+#define AP_CSW          0x00
+#define AP_TAR          0x04
+#define AP_DRW          0x0C
+#define AP_BD0          0x10
+#define AP_BD1          0x14
+#define AP_BD2          0x18
+#define AP_BD3          0x1C
+#define AP_CFG          0xF4
+#define AP_BASE         0xF8
+#define AP_IDR          0xFC
 
 /************************************************************************************* Маски для записи в регистры DP */
 

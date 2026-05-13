@@ -5,8 +5,12 @@
 #include "soft_SWD.h"
 #include "LED.h"
 
+#include "N32G45x.h"
+
+
+
 #define FIRMWARE_SIZE           0x1180
-#define PAGE_SIZE               0x400
+#define PAGE_SIZE               0x800
 #define TARGET_MEMORY_ADDRESS   0x08000000
 
 /********************* В файл линкера добавлено размещение 2 прошивок в flash память программатора ********************/
@@ -49,20 +53,20 @@ static void fill_sended_buffer(uint8_t* sended_data, uint32_t* sended_size)
     }
 }
 
-/** Проверить совпадают ли записанные данные с прочитанными (0 - совпадают, 1 - есть несовпадение) */
-static uint8_t compare_sended_readed(uint8_t* sended_data, uint8_t* readed_data, uint32_t size)
-{
-    uint8_t result = 0;
-    for (uint32_t i = 0; i < size; i++)
-    {
-        if (sended_data[i] != readed_data[i])
-        {
-            result = 1;
-            break;
-        }
-    }
-    return result;
-}
+///////** Проверить совпадают ли записанные данные с прочитанными (0 - совпадают, 1 - есть несовпадение) */
+//////static uint8_t compare_sended_readed(uint8_t* sended_data, uint8_t* readed_data, uint32_t size)
+//////{
+//////    uint8_t result = 0;
+//////    for (uint32_t i = 0; i < size; i++)
+//////    {
+//////        if (sended_data[i] != readed_data[i])
+//////        {
+//////            result = 1;
+//////            break;
+//////        }
+//////    }
+//////    return result;
+//////}
 
 
 
@@ -88,9 +92,9 @@ int main()
 
         uint32_t idcode = SoftSWD_Get_IDCODE();         // Чтение IDCODE таргета
 
-        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
+//        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
         SoftSWD_Erase_Flash(TARGET_MEMORY_ADDRESS, FIRMWARE_SIZE);
-        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
+//        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
         SoftSWD_Reset_Target();
 
         while (current_offset <= FIRMWARE_SIZE)
