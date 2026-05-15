@@ -2,10 +2,11 @@
 #include "CMSIS/stm32f4xx.h"
 #include "systick.h"
 #include "gpio.h"
-#include "soft_SWD.h"
 #include "LED.h"
 
-#include "N32G45x_Flash.h"
+#include "programmer_target_Flash.h"
+
+
 
 
 
@@ -93,9 +94,10 @@ int main()
         uint32_t idcode = SoftSWD_Get_IDCODE();         // Чтение IDCODE таргета
 
 //        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
-        SoftSWD_Erase_Flash(TARGET_MEMORY_ADDRESS, FIRMWARE_SIZE);
+//        SoftSWD_Erase_Flash(TARGET_MEMORY_ADDRESS, FIRMWARE_SIZE);
+        Erase_Flash_size(TARGET_MEMORY_ADDRESS, FIRMWARE_SIZE);
 //        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
-        SoftSWD_Reset_Target();
+//        SoftSWD_Reset_Target();
 
         while (current_offset <= FIRMWARE_SIZE)
         {
@@ -103,7 +105,7 @@ int main()
             fill_sended_buffer(sended_data, &sending_bytes);
 
             // Запись по указанному адресу
-            SoftSWD_Write_FLASH(TARGET_MEMORY_ADDRESS + current_offset, sended_data, sending_bytes);
+            Program_Flash(TARGET_MEMORY_ADDRESS + current_offset, sended_data, sending_bytes);
 
             // Чтение для проверки успешности записи
             SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS + current_offset, readed_data, sending_bytes);

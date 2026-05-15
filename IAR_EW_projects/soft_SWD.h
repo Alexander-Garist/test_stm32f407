@@ -189,7 +189,7 @@ SoftSWD_Request;
 #define SWD_ACK_WAIT    (0x2U)
 #define SWD_ACK_FAIL    (0x4U)
 
-// Стандартное значение регистра CSW, выбран MEM-AP настроен доступ к отладке и памяти таргета
+// Стандартное значение регистра CSW, выбран MEM-AP, настроен доступ к отладке и памяти таргета
 #define MEM_AP_DEFAULT  (0x23000002)
 
 #define SOFT_SWD_TICK_DURATION  (4)         // Продолжительность 1 такта SWD в тактах процессора
@@ -208,36 +208,26 @@ void SoftSWD_Sync_Target();
 /** Аппаратный сброс таргета */
 void SoftSWD_Reset_Target();
 
-/** Чтение из памяти таргета:
-*       начиная с адреса address
-*       записывая в буфер buffer
-*       количество байт size
- */
-void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size);
-
 /** Прочитать DP_IDCODE */
 uint32_t SoftSWD_Get_IDCODE();
 
-/** Запись в RAM память таргета:
-*       начиная с адреса address
-*       записывая данные из buffer
-*       количество байт size
- */
-void SoftSWD_Write_RAM(uint32_t address, uint8_t* buffer, uint32_t size);
 
-/** Запись в Flash память таргета:
-*       начиная с адреса address
-*       записывая данные из buffer
-*       количество байт size
- */
-void SoftSWD_Write_Flash(uint32_t address, uint8_t* buffer, uint32_t size);
-void SoftSWD_ClearErrors(void);
+/** Чтение значения регистра AP или DP */
+uint32_t SoftSWD_ReadRegister(uint8_t DP_AP, uint8_t Addr);
+
+/** Запись значения в регистр AP или DP */
+void SoftSWD_WriteRegister(uint8_t DP_AP, uint8_t Addr, uint32_t register_value);
+
+/** Функция-обертка статической функции настройки DP регистров для работы с MEM-AP */
+void SoftSWD_set_MEM_AP();
 
 
-/** Запись в flash таргета */
-void SoftSWD_Write_FLASH(uint32_t address, uint8_t* buffer, uint32_t size);
 
-void SoftSWD_Erase_Flash(uint32_t address, uint32_t size);
+/** Чтение из памяти таргета */
+void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size);
+
+/** Запись в RAM память таргета */
+void SoftSWD_WriteMemory_RAM(uint32_t address, uint8_t* buffer, uint32_t size);
 
 
 #endif /* __SOFT_SWD_H__ */
