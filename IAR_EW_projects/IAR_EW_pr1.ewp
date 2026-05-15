@@ -2164,7 +2164,10 @@
             <name>$PROJ_DIR$\LED.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\N32G45x.h</name>
+            <name>$PROJ_DIR$\N32G45x_Flash.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\programmer_target_Flash.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\soft_SWD.h</name>
@@ -2209,7 +2212,7 @@
             <name>$PROJ_DIR$\LED.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\N32G45x.c</name>
+            <name>$PROJ_DIR$\programmer_target_Flash.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\soft_SWD.c</name>

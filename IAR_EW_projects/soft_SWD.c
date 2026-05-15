@@ -301,7 +301,11 @@ void SoftSWD_ClearErrors(void)
 {
     SoftSWD_Request req = SoftSWD_MakeRequest_WithStruct(DP, WRITE, DP_ABORT);
     SoftSWD_Send_Request_ACK(req);
-    SoftSWD_WriteData(ORUNERRCLR | WDATAERR | STICKYERR | STICKYCMP);
+    SoftSWD_WriteData(DP_ABORT_ORUNERRCLR |
+                      DP_ABORT_WDERRCLR |
+                      DP_ABORT_STKERRCLR |
+                      DP_ABORT_STKCMPCLR
+                          );
 }
 
 ///** Запись значения в регистр AP или DP */
@@ -426,13 +430,6 @@ void SoftSWD_Init()
     SoftSWD_Pin_Enable();   // Настройка пинов программного SWD
 }
 
-
-// эти функции по логике должны быть статическими, т.к. никто не будет вручную вызывать синхронизацию устройств или чтение IDCODE
-// должна быть функция connect()
-// в ней должно происходить подключение на физическом уровне, результатом успешного физического подключения будет возможность считать IDCODE
-// + подключение к ядру: включение питания модуля отладки, модуля flash памяти
-
-
 /** Синхронизация мастера и таргета */
 void SoftSWD_Sync_Target()
 {
@@ -457,62 +454,26 @@ uint32_t SoftSWD_Get_IDCODE()
     return (SoftSWD_ReadRegister(DP, DP_IDCODE));
 }
 
-
-// SoftSWD_Init() вызывается 1 раз при настройке программатора, до суперцикла
-
-uint8_t SoftSWD_ConnectToTarget()
+/** Настройка DP регистров для работы программного SWD */
+static void SoftSWD_set_DP_registers(uint32_t APsel, uint8_t APbanksel)
 {
-    uint8_t result = 0;     // Результат выполнения функции (0 - успешно выполнено, 1 - ошибка)
+    // Включение питания системы и модуля отладки
+    SoftSWD_WriteRegister(DP, DP_CTRL_STAT, DP_CTRL_STAT_CSYSPWRUPREQ |
+                                            DP_CTRL_STAT_CDBGPWRUPREQ);
 
-    // 1. Синхронизация мастера и таргета
-    SoftSWD_Sync_Target();
-
-    // 2. Сброс ошибок, которые могли остаться от прошлой сессии
-    SoftSWD_ClearErrors();
-
-    // 3. Запись в регистр DP_CTRL_STAT => запрос на включение питания системы и модуля отладки
-    SoftSWD_WriteRegister(DP, DP_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    return result;
+    // Выбор текущего AP и активного регистрового блока выбранного AP
+    SoftSWD_WriteRegister(DP, DP_SELECT, DP_SELECT_APSEL(APsel) |
+                                         DP_SELECT_APBANKSEL(APbanksel));
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /** Чтение из памяти таргета (по указанному адресу памяти, заданное количество байт) */
 void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size)
 {
-    SoftSWD_WriteRegister(DP, DP_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);  // CTRL/STAT
-    SoftSWD_WriteRegister(DP, DP_SELECT, APSEL(0) | APBANKSEL(0));     // AP 0, Bank 0
+    // 1. Включение питания и выбор порта MEM-AP (запись в CTRL/STAT и выбор AP 0, Bank 0)
+    SoftSWD_set_DP_registers(MEM_AP_APSEL, MEM_AP_APBANKSEL);
 
     // AP 0, Addr 0x00 (CSW). Значение 0x23000002
-    SoftSWD_WriteRegister(AP, AP_CSW, 0x23000012);
+    SoftSWD_WriteRegister(AP, AP_CSW, MEM_AP_DEFAULT | AP_CSW_ADDRINC);
 
     // 1. запись адреса в TAR (AP 0x04)
     SoftSWD_WriteRegister(AP, AP_TAR, address);
@@ -545,12 +506,11 @@ void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size)
 /** Запись в память (RAM) таргета */
 void SoftSWD_Write_RAM(uint32_t address, uint8_t* buffer, uint32_t size)
 {
-    // 1. Стандартная подготовка (Сброс ошибок и питание)
-    SoftSWD_WriteRegister(DP, DP_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);     // CTRL/STAT
-    SoftSWD_WriteRegister(DP, DP_SELECT, APSEL(0x0) | APBANKSEL(0x0));        // AP 0, Bank 0
+    // 1. Включение питания и выбор порта MEM-AP (запись в CTRL/STAT и выбор AP 0, Bank 0)
+    SoftSWD_set_DP_registers(MEM_AP_APSEL, MEM_AP_APBANKSEL);
 
     // 2. Настройка CSW: 32-bit + Auto-increment (0x23000012)
-    SoftSWD_WriteRegister(AP, AP_CSW, 0x23000012);
+    SoftSWD_WriteRegister(AP, AP_CSW, MEM_AP_DEFAULT | AP_CSW_ADDRINC);
 
     // 3. Установка начального адреса в TAR (AP 0x04)
     SoftSWD_WriteRegister(AP, AP_TAR, address);
@@ -598,12 +558,11 @@ void SoftSWD_Write_RAM(uint32_t address, uint8_t* buffer, uint32_t size)
 /** стирает только необходимое количество страниц */
 void SoftSWD_Erase_Flash(uint32_t address, uint32_t size)
 {
-    // 1. Включение питания и выбор порта MEM-AP
-    SoftSWD_WriteRegister(DP, DP_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);
-    SoftSWD_WriteRegister(DP, DP_SELECT, APSEL(0) | APBANKSEL(0));
+    // 1. Включение питания и выбор порта MEM-AP (запись в CTRL/STAT и выбор AP 0, Bank 0)
+    SoftSWD_set_DP_registers(MEM_AP_APSEL, MEM_AP_APBANKSEL);
 
     // 2. Настройка шины на 32 бита (БЕЗ автоинкремента для управления регистрами)
-    SoftSWD_WriteRegister(AP, AP_CSW, 0x23000002);
+    SoftSWD_WriteRegister(AP, AP_CSW, MEM_AP_DEFAULT);
 
     // 3. Разблокировка Flash-контроллера (Unlock)
     SoftSWD_WriteRegister(AP, AP_TAR, FLASH_REG_KEY);
@@ -638,51 +597,6 @@ void SoftSWD_Erase_Flash(uint32_t address, uint32_t size)
     }
 }
 
-/** стирает всю память */
-//void SoftSWD_Mass_Erase_Flash()
-//{
-//    // 1. Включение питания и выбор порта MEM-AP
-//    SoftSWD_WriteRegister(DP, DP_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);
-//    SoftSWD_WriteRegister(DP, DP_SELECT, APSEL(0) | APBANKSEL(0));
-//
-//    // 2. Настройка шины на 32 бита (БЕЗ автоинкремента для управления регистрами)
-//    SoftSWD_WriteRegister(AP, AP_CSW, 0x23000002);
-//
-//    // 3. Разблокировка Flash-контроллера (Unlock)
-//    SoftSWD_WriteRegister(AP, AP_TAR, FLASH_REG_KEY);
-//    SoftSWD_WriteRegister(AP, AP_DRW, FLASH_KEY1);
-//    SoftSWD_WriteRegister(AP, AP_DRW, FLASH_KEY2);
-//
-//    // 4. Стирание необходимого количества страниц
-//    uint32_t num_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
-//    for (uint32_t p = 0; p < num_pages; p++)
-//    {
-//        uint32_t page_addr = address + (p * PAGE_SIZE);
-//
-//        // Включаем режим стирания страницы (PER)
-//        SoftSWD_WriteRegister(AP, AP_TAR, FLASH_REG_CTRL);
-//        SoftSWD_WriteRegister(AP, AP_DRW, FLASH_CTRL_PER);
-//
-//        // Указываем адрес страницы
-//        SoftSWD_WriteRegister(AP, AP_TAR, FLASH_REG_ADDR);
-//        SoftSWD_WriteRegister(AP, AP_DRW, page_addr);
-//
-//        // Запуск (PER + START)
-//        SoftSWD_WriteRegister(AP, AP_TAR, FLASH_REG_CTRL);
-//        SoftSWD_WriteRegister(AP, AP_DRW, FLASH_CTRL_PER | FLASH_CTRL_START);
-//
-//        // Ожидание завершения BUSY
-//        uint32_t status;
-//        SoftSWD_WriteRegister(AP, AP_TAR, FLASH_REG_STS);
-//        do {
-//            SoftSWD_ReadRegister(AP, AP_DRW);
-//            status = SoftSWD_ReadRegister(DP, DP_RDBUFF);
-//        } while (status & 0x01);
-//    }
-//}
-
-
-
 
 
 
@@ -699,12 +613,11 @@ void SoftSWD_Erase_Flash(uint32_t address, uint32_t size)
 /** Запись в flash таргета */
 void SoftSWD_Write_FLASH(uint32_t address, uint8_t* buffer, uint32_t size)
 {
-    // 1. Включение питания и выбор порта MEM-AP
-    SoftSWD_WriteRegister(DP, DP_CTRL_STAT, CSYSPWRUPREQ | CDBGPWRUPREQ);
-    SoftSWD_WriteRegister(DP, DP_SELECT, APSEL(0) | APBANKSEL(0));
+    // 1. Включение питания и выбор порта MEM-AP (запись в CTRL/STAT и выбор AP 0, Bank 0)
+    SoftSWD_set_DP_registers(MEM_AP_APSEL, MEM_AP_APBANKSEL);
 
     // Настройка шины на 32 бита (БЕЗ автоинкремента для управления регистрами)
-    SoftSWD_WriteRegister(AP, AP_CSW, 0x23000002);
+    SoftSWD_WriteRegister(AP, AP_CSW, MEM_AP_DEFAULT);
 
     // Разблокировка Flash-контроллера (Unlock)
     SoftSWD_WriteRegister(AP, AP_TAR, FLASH_REG_KEY);
@@ -726,7 +639,7 @@ void SoftSWD_Write_FLASH(uint32_t address, uint8_t* buffer, uint32_t size)
         SoftSWD_WriteRegister(AP, AP_TAR, current_addr);
         SoftSWD_WriteRegister(AP, AP_DRW, data_to_write);
 
-        // Ожидание BUSY (обязательно после каждого слова!)
+        // Ожидание BUSY (обязательно после каждого слова)
         uint32_t status;
         SoftSWD_WriteRegister(AP, AP_TAR, FLASH_REG_STS);
         do {
