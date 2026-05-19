@@ -108,10 +108,11 @@ int main()
             current_offset += PAGE_SIZE;
         }
 
-        //SoftSWD_Reset_Target();
         delay_ms(100);
         Target_Run();
+
         SoftSWD_Reset_Target();
+        delay_ms(3000);
 
 
         /** Светодиоды:
