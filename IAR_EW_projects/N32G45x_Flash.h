@@ -111,14 +111,16 @@
 *   FLASH_CTRL_OPTER = 1.
 *   FLASH_CTRL_START = 1.
 *   Подождать пока FLASH_STS_BUSY не станет 0.
+*   FLASH_CTRL_OPTER = 0.
 *   Прочитать стертый Option byte, убедиться что он действительно стерт.
 *
 *       Запись
 *   Убедиться, что FLASH_STS_BUSY == 0 (не выполняется никакая другая операция стирания/записи).
 *   Разблокировать FLASH_CTRL_OPTWE
 *   FLASH_CTRL_OPTPG = 1.
-*   Записать слово Option bytes по нужному адресу как *address_in_flash = value;
+*   Записать слово Option bytes по нужному адресу как *address_in_flash = value; ()
 *   Подождать пока FLASH_STS_BUSY не станет 0.
+*   FLASH_CTRL_OPTPG = 0.
 *   Прочитать Option byte, убедиться что он правильно записан.
 */
 

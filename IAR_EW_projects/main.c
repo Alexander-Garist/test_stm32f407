@@ -75,27 +75,22 @@ int main()
 {
     Clock_Config_168MHz_HSI();  // Разгон процессора до 168 МГц
     SysTick_Init();             // Инициализация системного таймера
+    SoftSWD_Init();             // Инициализация программного SWD
 
     // Объявление буфера отправляемых данных и принимаемых данных
     uint8_t sended_data[PAGE_SIZE] = { 0 };
     uint8_t readed_data[PAGE_SIZE] = { 0 };
 
-    SoftSWD_Init();             // Инициализация программного SWD
-    SoftSWD_Sync_Target();      // Синхронизация хоста с таргетом
-
     uint32_t sending_bytes = 0;
-
     uint32_t current_offset = 0;
 
 	while (1)
 	{
-        //current_offset = 0;
+        uint32_t idcode =  Connect_Target_GetIDCODE();  // Подключение к таргету и чтение его IDCODE
+        Target_Halt();                                  // Остановка ядра атргета
+        Erase_Flash_All();                              // Стирание всей Flash памяти
 
-        uint32_t idcode = SoftSWD_Get_IDCODE();         // Чтение IDCODE таргета
-
-//        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
-//        SoftSWD_Erase_Flash(TARGET_MEMORY_ADDRESS, FIRMWARE_SIZE);
-        Erase_Flash_size(TARGET_MEMORY_ADDRESS, FIRMWARE_SIZE);
+//        Erase_Flash_size(TARGET_MEMORY_ADDRESS, FIRMWARE_SIZE);
 //        SoftSWD_ReadMemory(TARGET_MEMORY_ADDRESS, readed_data, PAGE_SIZE);
 //        SoftSWD_Reset_Target();
 
@@ -115,6 +110,7 @@ int main()
 
         //SoftSWD_Reset_Target();
         delay_ms(100);
+        Target_Run();
         SoftSWD_Reset_Target();
 
 

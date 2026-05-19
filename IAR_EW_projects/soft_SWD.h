@@ -222,13 +222,15 @@ void SoftSWD_WriteRegister(uint8_t DP_AP, uint8_t Addr, uint32_t register_value)
 void SoftSWD_set_MEM_AP();
 
 
-
 /** Чтение из памяти таргета */
 void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size);
 
 /** Запись в RAM память таргета */
 void SoftSWD_WriteMemory_RAM(uint32_t address, uint8_t* buffer, uint32_t size);
 
+
+void SoftSWD_ClearErrors(void);
+void SoftSWD_Idle_Byte();
 
 #endif /* __SOFT_SWD_H__ */
 

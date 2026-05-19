@@ -136,7 +136,7 @@ static void SoftSWD_WriteByte(uint8_t byte)
     }
 }
 
-static void SoftSWD_Idle_Byte()
+void SoftSWD_Idle_Byte()
 {
     SoftSWD_WriteByte(0x0);
 }
