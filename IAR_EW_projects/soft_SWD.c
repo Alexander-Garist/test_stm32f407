@@ -512,36 +512,46 @@ void SoftSWD_ReadMemory(uint32_t address, uint8_t* buffer, uint32_t size)
     }
 }
 
-/** Запись в память (RAM) таргета */
-void SoftSWD_WriteMemory_RAM(uint32_t address, uint8_t* buffer, uint32_t size)
-{
-    // 1. Включение питания и выбор порта MEM-AP (запись в CTRL/STAT и выбор AP 0, Bank 0)
-    SoftSWD_set_MEM_AP();
-
-    // 2. Настройка CSW: 32-bit + Auto-increment (0x23000012)
-    SoftSWD_WriteRegister(AP, AP_CSW, MEM_AP_DEFAULT | AP_CSW_ADDRINC);
-
-    // 3. Установка начального адреса в TAR (AP 0x04)
-    SoftSWD_WriteRegister(AP, AP_TAR, address);
-
-    // 4. Определение количества 32-битных слов
-    uint32_t operations = size / 4;
-    if (size % 4) operations++; // Округляем вверх, если байты не кратны 4
-
-    // 5. Цикл записи
-    for (uint32_t i = 0; i < operations; i++)
-    {
-        // Упаковка байт из буфера в 32-битное слово
-        uint32_t data_to_write = pack_words(buffer + (i * 4));
-
-        // Запись в DRW (AP 0x0C). Автоинкремент TAR происходит сразу после каждой успешной транзакции данных.
-        SoftSWD_WriteRegister(AP, AP_DRW, data_to_write);
-    }
-
-    // прочитать регистр DP_CTRL_STAT
-    uint32_t ctrl_stat = SoftSWD_ReadRegister(DP, DP_CTRL_STAT);
-    if ((ctrl_stat >> 5) & 0x1) GPIO_set_HIGH(GPIOD, 14);
-}
+///** Запись в память (RAM) таргета */
+//void SoftSWD_WriteMemory_RAM(uint32_t address, void* buffer, uint32_t size)
+//{
+//    if(size % 4) return 1;
+//
+//    uin8_t res = 0;
+//
+//
+//    // 1. Включение питания и выбор порта MEM-AP (запись в CTRL/STAT и выбор AP 0, Bank 0)
+//    res |= SoftSWD_set_MEM_AP();
+//
+//    // 2. Настройка CSW: 32-bit + Auto-increment (0x23000012)
+//    SoftSWD_WriteRegister(AP, AP_CSW, MEM_AP_DEFAULT | AP_CSW_ADDRINC);
+//
+//    // 3. Установка начального адреса в TAR (AP 0x04)
+//    SoftSWD_WriteRegister(AP, AP_TAR, address);
+//
+////    // 4. Определение количества 32-битных слов
+////    uint32_t operations = size / 4;
+////    if (size % 4) operations++; // Округляем вверх, если байты не кратны 4
+//
+//    // 5. Цикл записи
+//    //for (uint32_t i = 0; i < operations; i++)
+//    uint32_t * ptr = (uin32_t*)buffer;
+//    for (uint32_t i = 0; i < size / 4; i+=4)
+//    {
+//        // Упаковка байт из буфера в 32-битное слово
+//        //uint32_t data_to_write = pack_words(buffer + (i * 4));
+//
+//        // Запись в DRW (AP 0x0C). Автоинкремент TAR происходит сразу после каждой успешной транзакции данных.
+//        //SoftSWD_WriteRegister(AP, AP_DRW, data_to_write);
+//        SoftSWD_WriteRegister(AP, AP_DRW, *ptr++);
+//    }
+//
+//    // прочитать регистр DP_CTRL_STAT
+//    uint32_t ctrl_stat = SoftSWD_ReadRegister(DP, DP_CTRL_STAT);
+//    if ((ctrl_stat >> 5) & 0x1) GPIO_set_HIGH(GPIOD, 14);
+//
+//    return res;
+//}
 
 
 

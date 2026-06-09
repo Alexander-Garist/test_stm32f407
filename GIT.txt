@@ -1,7 +1,3 @@
-токен для доступа к гитхабу
-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
-
-
 git шпаргалки
 
 1. Для создания ветки feature_... алгоритм действий такой:

@@ -55,7 +55,9 @@ keep { section FIRMWARE_SECTION };
 
 place at address mem:__ICFEDIT_intvec_start__ { readonly section .intvec };
 
-place in FLASH_region  { readonly, section FIRMWARE_SECTION };
+place at address mem:0x08004000 { section FIRMWARE_SECTION };
+
+place in FLASH_region  { readonly };
 place in PCARD_region  { readonly section application_specific_ro };
 place in CCRAM_region  { section .ccram };
 place in SRAM_region   { readwrite, block HEAP };
