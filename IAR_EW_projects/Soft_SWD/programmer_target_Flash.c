@@ -15,12 +15,12 @@ static void Unlock_Flash()
 }
 
 /** Разблокировка Flash Option Bytes */
-static void Unlock_Flash_OptionBytes()
-{
-    SoftSWD_WriteRegister(AP, AP_TAR, FLASH_OPTKEY);
-    SoftSWD_WriteRegister(AP, AP_DRW, OPTKEY1);
-    SoftSWD_WriteRegister(AP, AP_DRW, OPTKEY2);
-}
+//static void Unlock_Flash_OptionBytes()
+//{
+//    SoftSWD_WriteRegister(AP, AP_TAR, FLASH_OPTKEY);
+//    SoftSWD_WriteRegister(AP, AP_DRW, OPTKEY1);
+//    SoftSWD_WriteRegister(AP, AP_DRW, OPTKEY2);
+//}
 
 /** Блокировка Flash-контроллера */
 static void Lock_Flash()

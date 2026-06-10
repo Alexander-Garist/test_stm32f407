@@ -349,7 +349,9 @@
                 </option>
                 <option>
                     <name>CCIncludePath2</name>
-                    <state></state>
+                    <state>$PROJ_DIR$/CMSIS</state>
+                    <state>$PROJ_DIR$/periphery</state>
+                    <state>$PROJ_DIR$/interfaces</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -2132,99 +2134,93 @@
         </file>
     </group>
     <group>
-        <name>FreeRTOS</name>
-    </group>
-    <group>
-        <name>inc</name>
+        <name>firmwares</name>
         <file>
-            <name>$PROJ_DIR$\7_segment_indicator.h</name>
+            <name>$PROJ_DIR$\firmwares\target_n32g455_flash.bin</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\AD9833.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\BL24CM1A.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\button.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\exti.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\FM25Q08B.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\gpio.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\i2c.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\LED.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\N32G45x_Flash.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\programmer_target_Flash.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\soft_SWD.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\spi.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\systick.h</name>
-        </file>
-        <file>
-            <name>$PROJ_DIR$\usart.h</name>
+            <name>$PROJ_DIR$\firmwares\target_n32g455_ram.bin</name>
         </file>
     </group>
     <group>
-        <name>src</name>
+        <name>interfaces</name>
         <file>
-            <name>$PROJ_DIR$\7_segment_indicator.c</name>
+            <name>$PROJ_DIR$\interfaces\dcmi_camera.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\AD9833.c</name>
+            <name>$PROJ_DIR$\interfaces\dcmi_camera.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\BL24CM1A.c</name>
+            <name>$PROJ_DIR$\interfaces\i2c.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\button.c</name>
+            <name>$PROJ_DIR$\interfaces\i2c.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\exti.c</name>
+            <name>$PROJ_DIR$\interfaces\spi.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\FM25Q08B.c</name>
+            <name>$PROJ_DIR$\interfaces\spi.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\gpio.c</name>
+            <name>$PROJ_DIR$\interfaces\usart.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\i2c.c</name>
+            <name>$PROJ_DIR$\interfaces\usart.h</name>
+        </file>
+    </group>
+    <group>
+        <name>periphery</name>
+        <file>
+            <name>$PROJ_DIR$\periphery\button.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\LED.c</name>
+            <name>$PROJ_DIR$\periphery\button.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\programmer_target_Flash.c</name>
+            <name>$PROJ_DIR$\periphery\exti.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\soft_SWD.c</name>
+            <name>$PROJ_DIR$\periphery\exti.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\spi.c</name>
+            <name>$PROJ_DIR$\periphery\gpio.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\systick.c</name>
+            <name>$PROJ_DIR$\periphery\gpio.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\usart.c</name>
+            <name>$PROJ_DIR$\periphery\LED.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\periphery\LED.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\periphery\systick.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\periphery\systick.h</name>
+        </file>
+    </group>
+    <group>
+        <name>Soft_SWD</name>
+        <file>
+            <name>$PROJ_DIR$\Soft_SWD\N32G45x.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\Soft_SWD\N32G45x_Flash.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\Soft_SWD\programmer_target_Flash.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\Soft_SWD\programmer_target_Flash.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\Soft_SWD\soft_SWD.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\Soft_SWD\soft_SWD.h</name>
         </file>
     </group>
     <file>

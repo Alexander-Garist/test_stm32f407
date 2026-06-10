@@ -6,7 +6,7 @@
 /** Includes **********************************************************************************************************/
 #include <stdio.h>
 #include "exti.h"
-#include "CMSIS/stm32f4xx.h"
+#include "stm32f4xx.h"
 #include "gpio.h"
 #include "LED.h"
 #include "systick.h"

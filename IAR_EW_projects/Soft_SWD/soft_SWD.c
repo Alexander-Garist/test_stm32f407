@@ -408,15 +408,15 @@ static void parse_words(uint32_t data_word, uint8_t* buffer)
 }
 
 /** Упаковка 4 байт в одно 32-битное слово */
-static uint32_t pack_words(uint8_t* buffer)
-{
-    uint32_t data = 0;
-    data |= (uint32_t)buffer[0];
-    data |= (uint32_t)buffer[1] << 8;
-    data |= (uint32_t)buffer[2] << 16;
-    data |= (uint32_t)buffer[3] << 24;
-    return data;
-}
+//static uint32_t pack_words(uint8_t* buffer)
+//{
+//    uint32_t data = 0;
+//    data |= (uint32_t)buffer[0];
+//    data |= (uint32_t)buffer[1] << 8;
+//    data |= (uint32_t)buffer[2] << 16;
+//    data |= (uint32_t)buffer[3] << 24;
+//    return data;
+//}
 /**********************************************************************************************************************/
 
 
