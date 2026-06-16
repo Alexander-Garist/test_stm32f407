@@ -285,7 +285,7 @@
                 <option>
                     <name>CCAllowList</name>
                     <version>1</version>
-                    <state>00000000</state>
+                    <state>11111110</state>
                 </option>
                 <option>
                     <name>CCDebugInfo</name>
@@ -352,6 +352,7 @@
                     <state>$PROJ_DIR$/CMSIS</state>
                     <state>$PROJ_DIR$/periphery</state>
                     <state>$PROJ_DIR$/interfaces</state>
+                    <state>$PROJ_DIR$/Soft_SWD</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -367,16 +368,16 @@
                 </option>
                 <option>
                     <name>CCOptLevel</name>
-                    <state>0</state>
+                    <state>3</state>
                 </option>
                 <option>
                     <name>CCOptStrategy</name>
                     <version>0</version>
-                    <state>0</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCOptLevelSlave</name>
-                    <state>0</state>
+                    <state>3</state>
                 </option>
                 <option>
                     <name>CompilerMisraRules98</name>
@@ -435,7 +436,7 @@
                 <option>
                     <name>CCOptStrategySlave</name>
                     <version>0</version>
-                    <state>0</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCGuardCalls</name>
@@ -2145,10 +2146,10 @@
     <group>
         <name>interfaces</name>
         <file>
-            <name>$PROJ_DIR$\interfaces\dcmi_camera.c</name>
+            <name>$PROJ_DIR$\interfaces\dcmi.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\interfaces\dcmi_camera.h</name>
+            <name>$PROJ_DIR$\interfaces\dcmi.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\interfaces\i2c.c</name>

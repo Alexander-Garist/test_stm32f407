@@ -10,7 +10,7 @@
 /******************************************* Статические функции ******************************************************/
 
 // Включение тактирования порта GPIO
-static void GPIO_RCC_Enable(GPIO_TypeDef* GPIO_port)
+void GPIO_RCC_Enable(GPIO_TypeDef* GPIO_port)
 {
     uint32_t Address_Shift = (uint32_t)GPIO_port - (uint32_t)GPIOA;				// Расчет сдвига порта от GPIOA_BASE
     Address_Shift /= 1024;														// Сдвиг каждого порта от GPIOA_BASE составляет 0x0400, в десятичной системе 1024
@@ -48,11 +48,10 @@ static void GPIO_init_OUTPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 	// Начальный сброс и установка значения регистра PUPDR
     GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));
 	GPIO_port->PUPDR |= (PUPDR_NO_PUPD << (GPIO_pin * 2));
-
 }
 
 // Инициализация ввода GPIO
-static void GPIO_init_INPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+void GPIO_init_INPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 {
 	// Начальный сброс и установка значения регистра MODER
 	GPIO_port->MODER &= ~(MODER_ANALOG << (GPIO_pin * 2));
@@ -60,7 +59,7 @@ static void GPIO_init_INPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 
 	// Начальный сброс и установка значения регистра PUPDR
     GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));
-    GPIO_port->PUPDR |= (PUPDR_PD << (GPIO_pin * 2));
+    //GPIO_port->PUPDR |= (PUPDR_PD << (GPIO_pin * 2));
 }
 
 // Инициализация пина в режиме альтернативной функции
@@ -85,7 +84,7 @@ static void GPIO_init_AF_Mode(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin, uint8_t
         GPIO_port->AFR[1] &= ~(AFR_15 << (shifted_pin * 4));
         GPIO_port->AFR[1] |= (number_AF << (shifted_pin * 4));
     }
-    delay_ms(10);
+    delay_us(1);
 }
 
 /**************************************** Глобальные функции **********************************************************/
@@ -134,7 +133,7 @@ void GPIO_Enable_I2C(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 {
     GPIO_RCC_Enable(GPIO_port);									// Включение тактирования
     GPIO_port->OTYPER |= (OTYPER_OPEN_DRAIN << GPIO_pin);		// Open-drain для I2C
-    GPIO_port->OSPEEDR |= (OSPEEDR_VERY_HIGH << GPIO_pin);		// High speed
+    GPIO_port->OSPEEDR |= (OSPEEDR_VERY_HIGH << (GPIO_pin * 2));// High speed
     GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));	// Начальный сброс
     GPIO_port->PUPDR |= (PUPDR_PU << (GPIO_pin * 2));			// Pull-UP
     GPIO_init_AF_Mode(GPIO_port, GPIO_pin, AFR_4);				// Настройка регистров MODER и AFR
@@ -200,3 +199,37 @@ void GPIO_Enable_USART(USART_TypeDef* USARTx, GPIO_TypeDef* GPIO_port_Tx, uint8_
 
 	GPIO_port_Rx->PUPDR |= (PUPDR_PU << (GPIO_pin_Rx * 2));
 }
+
+// Инициализация GPIO в режиме DCMI
+void GPIO_Enable_DCMI(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+{
+    GPIO_RCC_Enable(GPIO_port);                                 // Включение тактирования
+    GPIO_port->OTYPER &= ~(OTYPER_OPEN_DRAIN << GPIO_pin);      // Push-pull для DCMI
+    GPIO_port->OSPEEDR |= (OSPEEDR_VERY_HIGH << (GPIO_pin * 2));// Very High Speed
+    GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));    // No Pull
+    GPIO_init_AF_Mode(GPIO_port, GPIO_pin, AFR_13);
+}
+
+// Инициализация GPIO в режиме TIM1_2
+void GPIO_Enable_TIM1_2(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+{
+    GPIO_RCC_Enable(GPIO_port);                                 // Включение тактирования
+    GPIO_port->OTYPER &= ~(OTYPER_OPEN_DRAIN << GPIO_pin);      // Push-pull
+    GPIO_port->OSPEEDR |= (OSPEEDR_VERY_HIGH << (GPIO_pin * 2));// Very High Speed
+    GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));    // No Pull
+    GPIO_init_AF_Mode(GPIO_port, GPIO_pin, AFR_1);
+}
+
+
+// Инициализация GPIO в режиме TIM3_4_5
+void GPIO_Enable_TIM3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+{
+    GPIO_RCC_Enable(GPIO_port);                                 // Включение тактирования
+    GPIO_port->OTYPER &= ~(OTYPER_OPEN_DRAIN << GPIO_pin);      // Push-pull
+    GPIO_port->OSPEEDR |= (OSPEEDR_VERY_HIGH << (GPIO_pin * 2));// Very High Speed
+    GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));    // No Pull
+    GPIO_init_AF_Mode(GPIO_port, GPIO_pin, AFR_2);
+}
+
+
+

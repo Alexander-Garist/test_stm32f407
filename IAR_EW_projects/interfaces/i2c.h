@@ -99,4 +99,34 @@ I2C_Status_t I2C_Read(
 	*/
 void I2C_Status_Report(I2C_Status_t Function_Status);
 
+
+
+
+
+
+
+
+
+
+#define OV2640_ADDRESS   0x30 // 7-битный адрес модуля камеры OV2640
+
+/***************** Специальные функции для работы с регистрами устройств *****************/
+
+/** ! Функция I2C_Write_Reg записывает значение в одиночный регистр устройства
+ - I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
+ - I2C_device_addr - адрес устройства
+ - reg_addr - номер (адрес) регистра камеры
+ - value - записываемое значение
+ return: статус выполнения */
+I2C_Status_t I2C_Write_Reg(I2C_TypeDef * I2Cx, uint8_t I2C_device_addr, uint8_t reg_addr, uint8_t value);
+
+/** ! Функция I2C_Read_Reg считывает значение из одиночного регистра устройства
+ - I2Cx - выбранный модуль I2C (I2C1, I2C2, I2C3)
+ - I2C_device_addr - адрес устройства
+ - reg_addr - номер (адрес) регистра камеры
+ - reg_data - указатель, куда сохранить считанный байт
+ return: статус выполнения */
+I2C_Status_t I2C_Read_Reg(I2C_TypeDef * I2Cx, uint8_t I2C_device_addr, uint8_t reg_addr, uint8_t * reg_data);
+
+
 #endif /*__I2C_H__ */

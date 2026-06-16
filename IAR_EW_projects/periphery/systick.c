@@ -209,6 +209,10 @@ void Clock_Config_168MHz_HSI(void)
     FLASH->ACR = FLASH_ACR_ICEN | FLASH_ACR_DCEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY_5WS;
 
     // 4. Ќастройка делителей шин (AHB, APB1, APB2)
+
+    // ќчищаем старые биты делителей шин
+    RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
+
     RCC->CFGR |= RCC_CFGR_HPRE_DIV1;  // AHB = 168 ћ√ц
     RCC->CFGR |= RCC_CFGR_PPRE2_DIV2; // APB2 = 84 ћ√ц (макс)
     RCC->CFGR |= RCC_CFGR_PPRE1_DIV4; // APB1 = 42 ћ√ц (макс)

@@ -151,4 +151,27 @@ void GPIO_Enable_USART(
 	uint8_t			GPIO_pin_Rx
 );
 
+/**
+! Функция GPIO_Enable_DCMI инициализирует порт GPIO в режиме альтернативной
+    функции AF13 (DCMI).
+- GPIO_port - порт GPIO
+- GPIO_pin - пин GPIO
+*/
+void GPIO_Enable_DCMI(
+    GPIO_TypeDef* GPIO_port,
+    uint8_t GPIO_pin
+);
+
+// Инициализация GPIO в режиме TIM1_2
+void GPIO_Enable_TIM1_2(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
+
+// Инициализация GPIO в режиме TIM3_4_5
+void GPIO_Enable_TIM3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
+
+
+void GPIO_init_INPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
+void GPIO_RCC_Enable(GPIO_TypeDef* GPIO_port);
+
+
+
 #endif /*__GPIO_H__ */
