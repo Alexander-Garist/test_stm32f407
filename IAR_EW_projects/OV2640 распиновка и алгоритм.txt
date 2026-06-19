@@ -1,3 +1,5 @@
+Попытка с DCMI
+
 Пин камеры  Пин платы STM32
 1 VCC 		3.3V
 2 GND 		GND
@@ -21,3 +23,71 @@
 
 верхний ряд:	GND (GND)	SCL	(PB10)	SDA	(PB11)	D0 (PC6)	D2 (PC8)	D4(PC11) 	D6 (PB8)	DCLK(PA6) 	PWDN(PB0)
 нижний ряд:		VCC	(3.3V)	VSYNC (PB7)	HREF(PA4)	RESET (PB1)	D1 (PC7)	D3(PC9)		D5 (PB6)	D7(PB9)		NC
+
+
+Без использования DCMI
+
+Пин камеры  Пин платы STM32
+1 VCC 		3.3V
+2 GND 		GND
+3 SCL 		I2C2_SCL	(PB10 AF4)
+4 SDA 		I2C2_SDA	(PB11 AF4)
+5 VSYNC 	PC8
+6 HREF 		PC9
+7 DCLK 		PC10
+8 NC
+9  D7 		PD7
+10 D6 		PD6
+11 D5 		PD5
+12 D4 		PD4
+13 D3 		PD3
+14 D2 		PD2
+15 D1 		PD1
+16 D0		PD0
+17 RESET 	GPIO output (PB1) 
+18 PWDN 	GPIO output (PB0) 
+
+
+
+
+
+
+
+// Функция захвата кадра, возвращающая количество реально считанных строк
+//int ov2640_capture_snapshot(uint8_t *buffer, int width, int height)
+//{
+//    int lines_processed = 0;
+//    uint8_t *p_buf = buffer; // Указатель для быстрой последовательной записи
+//
+//    // 1. Жесткая привязка к началу кадра (VSYNC)
+//    while (VSYNC_PORT->IDR & VSYNC_PIN);
+//    while (!(VSYNC_PORT->IDR & VSYNC_PIN));
+//    while (VSYNC_PORT->IDR & VSYNC_PIN);
+//
+//    // 2. Построчный опрос
+//    for (int y = 0; y < height; y++)
+//    {
+//        // Ожидание старта строки (HREF -> 1)
+//        while (!(HREF_PORT->IDR & HREF_PIN)) {
+//            //if (VSYNC_PORT->IDR & VSYNC_PIN) return lines_processed;
+//        }
+//
+//        for (int x = 0; x < width; x++)
+//        {
+//            // --- ЧТЕНИЕ БАЙТА ЯРКОСТИ (Y) ---
+//            while (!(DCLK_PORT->IDR & DCLK_PIN)); // Ждем фронт (0 -> 1)
+//            *p_buf++ = (uint8_t)((GPIOE->IDR >> 8) & 0xFF); // Быстрая запись через указатель
+//            while (DCLK_PORT->IDR & DCLK_PIN);   // Ждем спад (1 -> 0)
+//
+//            // --- ПРОПУСК БАЙТА ЦВЕТНОСТИ (U/V) ---
+//            while (!(DCLK_PORT->IDR & DCLK_PIN));
+//            while (DCLK_PORT->IDR & DCLK_PIN);
+//        }
+//        lines_processed++;
+//
+//        // Ожидание физического окончания строки камеры (HREF -> 0)
+//        while (HREF_PORT->IDR & HREF_PIN);
+//    }
+//    return lines_processed;
+//}
+

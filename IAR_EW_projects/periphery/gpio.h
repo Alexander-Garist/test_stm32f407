@@ -162,16 +162,13 @@ void GPIO_Enable_DCMI(
     uint8_t GPIO_pin
 );
 
-// Инициализация GPIO в режиме TIM1_2
-void GPIO_Enable_TIM1_2(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
+// Инициализация GPIO в режиме TIM_1_2
+void GPIO_Enable_TIM_1_2(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
 
-// Инициализация GPIO в режиме TIM3_4_5
-void GPIO_Enable_TIM3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
+// Инициализация GPIO в режиме TIM_3_4_5
+void GPIO_Enable_TIM_3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
 
-
-void GPIO_init_INPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
-void GPIO_RCC_Enable(GPIO_TypeDef* GPIO_port);
-
-
+// Конфигурация пинов ввода для работы с КМОП-камерой
+void GPIO_Camera_Input_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
 
 #endif /*__GPIO_H__ */

@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "image_processing.h"
 
@@ -122,44 +123,131 @@ void bradley_threshold_mcu_fast(const unsigned char* src, unsigned char* res, in
 #define WIDTH  160
 #define HEIGHT 120
 
-// Функция бинаризации Вульфа без использования динамической памяти (0 байт ОЗУ)
-void wolf_binarization_mcu(const unsigned char *src, unsigned char *dst, int window_size, float k_param)
-{
-    int radius = window_size / 2;
+//// Функция бинаризации Вульфа без использования динамической памяти (0 байт ОЗУ)
+//void wolf_binarization_mcu(const unsigned char *src, unsigned char *dst, int window_size, float k_param)
+//{
+//    int radius = window_size / 2;
+//
+//    // 1. Поиск глобального минимума яркости
+//    unsigned char min_val = 255;
+//    for (int i = 0; i < WIDTH * HEIGHT; i++)
+//    {
+//        if (src[i] < min_val)
+//        {
+//            min_val = src[i];
+//        }
+//    }
+//
+//    // 2. Первый проход: Поиск максимального стандартного отклонения (R)
+//    float max_stddev = 0.0f;
+//    for (int y = 0; y < HEIGHT; y++)
+//    {
+//        for (int x = 0; x < WIDTH; x++)
+//        {
+//            int sum = 0;
+//            int sq_sum = 0;
+//            int count = 0;
+//
+//            int y_start = (y - radius < 0) ? 0 : y - radius;
+//            int y_end = (y + radius >= HEIGHT) ? HEIGHT - 1 : y + radius;
+//            int x_start = (x - radius < 0) ? 0 : x - radius;
+//            int x_end = (x + radius >= WIDTH) ? WIDTH - 1 : x + radius;
+//
+//            for (int wy = y_start; wy <= y_end; wy++)
+//            {
+//                int row_offset = wy * WIDTH;
+//                for (int wx = x_start; wx <= x_end; wx++)
+//                {
+//                    unsigned char val = src[row_offset + wx];
+//                    sum += val;
+//                    sq_sum += val * val; // Сумма квадратов не переполнит 32-битный int
+//                    count++;
+//                }
+//            }
+//
+//            float mean = (float)sum / count;
+//            float variance = ((float)sq_sum / count) - (mean * mean);
+//            if (variance < 0) variance = 0.0f;
+//            float stddev = sqrtf(variance);
+//
+//            if (stddev > max_stddev) {
+//                max_stddev = stddev;
+//            }
+//        }
+//    }
+//
+//    float R = max_stddev;
+//    if (R == 0.0f) R = 1.0f; // Защита от деления на ноль
+//
+//    // 3. Второй проход: Локальный расчет порога и запись результата
+//    for (int y = 0; y < HEIGHT; y++)
+//    {
+//        for (int x = 0; x < WIDTH; x++)
+//        {
+//            int sum = 0;
+//            int sq_sum = 0;
+//            int count = 0;
+//
+//            int y_start = (y - radius < 0) ? 0 : y - radius;
+//            int y_end = (y + radius >= HEIGHT) ? HEIGHT - 1 : y + radius;
+//            int x_start = (x - radius < 0) ? 0 : x - radius;
+//            int x_end = (x + radius >= WIDTH) ? WIDTH - 1 : x + radius;
+//
+//            for (int wy = y_start; wy <= y_end; wy++)
+//            {
+//                int row_offset = wy * WIDTH;
+//                for (int wx = x_start; wx <= x_end; wx++)
+//                {
+//                    unsigned char val = src[row_offset + wx];
+//                    sum += val;
+//                    sq_sum += val * val;
+//                    count++;
+//                }
+//            }
+//
+//            float mean = (float)sum / count;
+//            float variance = ((float)sq_sum / count) - (mean * mean);
+//            if (variance < 0) variance = 0.0f;
+//            float stddev = sqrtf(variance);
+//
+//            // Вычисление порога Вульфа
+//            float threshold = (1.0f - k_param) * mean + k_param * (float)min_val + k_param * (stddev / R) * (mean - (float)min_val);
+//
+//            int idx = y * WIDTH + x;
+//            dst[idx] = (src[idx] >= threshold) ? 255 : 0;
+//        }
+//    }
+//}
 
-    // 1. Поиск глобального минимума яркости
-    unsigned char min_val = 255;
-    for (int i = 0; i < WIDTH * HEIGHT; i++)
-    {
-        if (src[i] < min_val)
-        {
-            min_val = src[i];
-        }
+
+
+void wolf_binarization_mcu(const uint8_t *src, uint8_t *dst, int width, int height, int window_size, float k_param) {
+    int radius = window_size / 2;
+    int total_pixels = width * height;
+
+    // Шаг 1: Поиск глобального минимума яркости (Min)
+    uint8_t min_val = 255;
+    for (int i = 0; i < total_pixels; i++) {
+        if (src[i] < min_val) min_val = src[i];
     }
 
-    // 2. Первый проход: Поиск максимального стандартного отклонения (R)
+    // Шаг 2: Поиск максимального стандартного отклонения (R) по всему кадру
     float max_stddev = 0.0f;
-    for (int y = 0; y < HEIGHT; y++)
-    {
-        for (int x = 0; x < WIDTH; x++)
-        {
-            int sum = 0;
-            int sq_sum = 0;
-            int count = 0;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int sum = 0, sq_sum = 0, count = 0;
 
             int y_start = (y - radius < 0) ? 0 : y - radius;
-            int y_end = (y + radius >= HEIGHT) ? HEIGHT - 1 : y + radius;
+            int y_end = (y + radius >= height) ? height - 1 : y + radius;
             int x_start = (x - radius < 0) ? 0 : x - radius;
-            int x_end = (x + radius >= WIDTH) ? WIDTH - 1 : x + radius;
+            int x_end = (x + radius >= width) ? width - 1 : x + radius;
 
-            for (int wy = y_start; wy <= y_end; wy++)
-            {
-                int row_offset = wy * WIDTH;
-                for (int wx = x_start; wx <= x_end; wx++)
-                {
-                    unsigned char val = src[row_offset + wx];
+            for (int wy = y_start; wy <= y_end; wy++) {
+                int row_offset = wy * width;
+                for (int wx = x_start; wx <= x_end; wx++) {
+                    uint8_t val = src[row_offset + wx];
                     sum += val;
-                    sq_sum += val * val; // Сумма квадратов не переполнит 32-битный int
+                    sq_sum += val * val;
                     count++;
                 }
             }
@@ -175,29 +263,22 @@ void wolf_binarization_mcu(const unsigned char *src, unsigned char *dst, int win
         }
     }
 
-    float R = max_stddev;
-    if (R == 0.0f) R = 1.0f; // Защита от деления на ноль
+    float R = (max_stddev == 0.0f) ? 1.0f : max_stddev;
 
-    // 3. Второй проход: Локальный расчет порога и запись результата
-    for (int y = 0; y < HEIGHT; y++)
-    {
-        for (int x = 0; x < WIDTH; x++)
-        {
-            int sum = 0;
-            int sq_sum = 0;
-            int count = 0;
+    // Шаг 3: Финальный расчет локального порога Вульфа и бинаризация
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int sum = 0, sq_sum = 0, count = 0;
 
             int y_start = (y - radius < 0) ? 0 : y - radius;
-            int y_end = (y + radius >= HEIGHT) ? HEIGHT - 1 : y + radius;
+            int y_end = (y + radius >= height) ? height - 1 : y + radius;
             int x_start = (x - radius < 0) ? 0 : x - radius;
-            int x_end = (x + radius >= WIDTH) ? WIDTH - 1 : x + radius;
+            int x_end = (x + radius >= width) ? width - 1 : x + radius;
 
-            for (int wy = y_start; wy <= y_end; wy++)
-            {
-                int row_offset = wy * WIDTH;
-                for (int wx = x_start; wx <= x_end; wx++)
-                {
-                    unsigned char val = src[row_offset + wx];
+            for (int wy = y_start; wy <= y_end; wy++) {
+                int row_offset = wy * width;
+                for (int wx = x_start; wx <= x_end; wx++) {
+                    uint8_t val = src[row_offset + wx];
                     sum += val;
                     sq_sum += val * val;
                     count++;
@@ -209,14 +290,14 @@ void wolf_binarization_mcu(const unsigned char *src, unsigned char *dst, int win
             if (variance < 0) variance = 0.0f;
             float stddev = sqrtf(variance);
 
-            // Вычисление порога Вульфа
+            // Оригинальная математическая формула Кристиана Вульфа
             float threshold = (1.0f - k_param) * mean + k_param * (float)min_val + k_param * (stddev / R) * (mean - (float)min_val);
 
-            int idx = y * WIDTH + x;
+            int idx = y * width + x;
+
+            // Если пиксель светлее порога — делаем его белым (255), если темнее — черным (0)
             dst[idx] = (src[idx] >= threshold) ? 255 : 0;
         }
     }
 }
-
-
 

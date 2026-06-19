@@ -41,7 +41,7 @@ static void SysTick_Update_ms(void)
     static uint32_t accumulated_ticks = 0;
     uint32_t current_val = SysTick->VAL;
 
-    // Вместо магического числа используем статический флаг для первой инициализации
+    // Статический флаг для первой инициализации
     static uint32_t last_VAL = 0;
     static uint8_t is_first_run = 1;
 
@@ -82,7 +82,7 @@ static void SysTick_Update_us(void)
     static uint32_t accumulated_ticks = 0;
     uint32_t current_val = SysTick->VAL;
 
-    // Вместо магического числа используем статический флаг для первой инициализации
+    // Статический флаг для первой инициализации
     static uint32_t last_VAL = 0;
     static uint8_t is_first_run = 1;
 
@@ -131,14 +131,14 @@ uint32_t get_current_us(void)
 	return us_counter;
 }
 
-/** Неблокирующая задержка в мс */
+/** "Неблокирующая задержка" в мс - прошло ли заданное количество миллисекунд от точки старта */
 uint32_t is_time_passed_ms(uint32_t start_time_ms, uint32_t delay_time_ms)
 {
 	SysTick_Update_ms();
 	return (ms_counter - start_time_ms) >= delay_time_ms;
 }
 
-/** Неблокирующая задержка в мкс */
+/** "Неблокирующая задержка" в мкс - прошло ли заданное количество микросекунд от точки старта */
 uint32_t is_time_passed_us(uint32_t start_time_us, uint32_t delay_time_us)
 {
 	SysTick_Update_us();
@@ -173,13 +173,17 @@ void delay_ticks(uint32_t ticks)
     uint32_t accumulated = 0;
     uint32_t previous = start;
 
-    while (accumulated < ticks) {
+    while (accumulated < ticks)
+    {
         uint32_t current = SysTick->VAL;
 
-        if (current <= previous) {
+        if (current <= previous)
+        {
             // Обычный случай: счетчик уменьшился
             accumulated += (previous - current);
-        } else {
+        }
+        else
+        {
             // Произошел перезапуск (переход через 0 к LOAD)
             accumulated += (previous + (load - current));
         }
@@ -196,21 +200,21 @@ void SysTick_Handler(void)
 /** Установка частоты процессора 168 МГц */
 void Clock_Config_168MHz_HSI(void)
 {
-    // 1. Включаем HSI и ждем стабилизации
+    // 1. Включение HSI и ожидание стабилизации
     RCC->CR |= RCC_CR_HSION;
     while(!(RCC->CR & RCC_CR_HSIRDY));
 
-    // 2. Настраиваем Power Control для высокой частоты (VOS = 1)
+    // 2. Настройка Power Control для высокой частоты (VOS = 1)
     RCC->APB1ENR |= RCC_APB1ENR_PWREN;
     PWR->CR |= PWR_CR_VOS;
 
-    // 3. Настраиваем Flash Latency (5 тактов ожидания для 168 МГц)
-    // А также включаем Prefetch и кэши инструкций/данных для скорости
+    // 3. Настройка Flash Latency (5 тактов ожидания для 168 МГц)
+    // + включение Prefetch и кэши инструкций/данных для скорости
     FLASH->ACR = FLASH_ACR_ICEN | FLASH_ACR_DCEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY_5WS;
 
     // 4. Настройка делителей шин (AHB, APB1, APB2)
 
-    // Очищаем старые биты делителей шин
+    // Сброс старых битов делителей шин
     RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
 
     RCC->CFGR |= RCC_CFGR_HPRE_DIV1;  // AHB = 168 МГц
@@ -218,22 +222,22 @@ void Clock_Config_168MHz_HSI(void)
     RCC->CFGR |= RCC_CFGR_PPRE1_DIV4; // APB1 = 42 МГц (макс)
 
     // 5. Конфигурация PLL: M=16, N=336, P=2 (00), Q=7
-    // Сбрасываем и записываем заново
+    // Сброс и запись
     RCC->PLLCFGR = (16 << RCC_PLLCFGR_PLLM_Pos) |
                    (336 << RCC_PLLCFGR_PLLN_Pos) |
                    (0 << RCC_PLLCFGR_PLLP_Pos) |   // 00 означает делитель 2
                    (7 << RCC_PLLCFGR_PLLQ_Pos) |   // Для USB/SDIO
                    RCC_PLLCFGR_PLLSRC_HSI;         // Источник HSI
 
-    // 6. Включаем PLL и ждем фиксации (Lock)
+    // 6. Включение PLL и ожидание фиксации (Lock)
     RCC->CR |= RCC_CR_PLLON;
     while(!(RCC->CR & RCC_CR_PLLRDY));
 
-    // 7. Переключаем System Clock на PLL
+    // 7. Переключение System Clock на PLL
     RCC->CFGR &= ~RCC_CFGR_SW;
     RCC->CFGR |= RCC_CFGR_SW_PLL;
     while((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL);
 
-    // 8. Обновляем глобальную переменную (для функций задержки)
+    // 8. Обновление глобальной переменной системной частоты
     SystemCoreClockUpdate();
 }

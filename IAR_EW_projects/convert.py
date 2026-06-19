@@ -1,4 +1,4 @@
-with open("memory.hex", "r") as f:
+with open("memory_binary.hex", "r") as f:
     data = bytearray()
     for line in f:
         line = line.strip()
@@ -7,5 +7,5 @@ with open("memory.hex", "r") as f:
             payload = line[9:9+count*2]
             data.extend(bytes.fromhex(payload))
 
-with open("memory.raw", "wb") as f:
+with open("memory_binary.raw", "wb") as f:
     f.write(data)

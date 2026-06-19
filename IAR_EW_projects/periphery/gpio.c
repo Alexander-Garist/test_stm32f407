@@ -10,7 +10,7 @@
 /******************************************* Статические функции ******************************************************/
 
 // Включение тактирования порта GPIO
-void GPIO_RCC_Enable(GPIO_TypeDef* GPIO_port)
+static void GPIO_RCC_Enable(GPIO_TypeDef* GPIO_port)
 {
     uint32_t Address_Shift = (uint32_t)GPIO_port - (uint32_t)GPIOA;				// Расчет сдвига порта от GPIOA_BASE
     Address_Shift /= 1024;														// Сдвиг каждого порта от GPIOA_BASE составляет 0x0400, в десятичной системе 1024
@@ -51,7 +51,7 @@ static void GPIO_init_OUTPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 }
 
 // Инициализация ввода GPIO
-void GPIO_init_INPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+static void GPIO_init_INPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 {
 	// Начальный сброс и установка значения регистра MODER
 	GPIO_port->MODER &= ~(MODER_ANALOG << (GPIO_pin * 2));
@@ -210,8 +210,8 @@ void GPIO_Enable_DCMI(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
     GPIO_init_AF_Mode(GPIO_port, GPIO_pin, AFR_13);
 }
 
-// Инициализация GPIO в режиме TIM1_2
-void GPIO_Enable_TIM1_2(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+// Инициализация GPIO в режиме TIM_1_2
+void GPIO_Enable_TIM_1_2(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 {
     GPIO_RCC_Enable(GPIO_port);                                 // Включение тактирования
     GPIO_port->OTYPER &= ~(OTYPER_OPEN_DRAIN << GPIO_pin);      // Push-pull
@@ -220,9 +220,8 @@ void GPIO_Enable_TIM1_2(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
     GPIO_init_AF_Mode(GPIO_port, GPIO_pin, AFR_1);
 }
 
-
-// Инициализация GPIO в режиме TIM3_4_5
-void GPIO_Enable_TIM3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+// Инициализация GPIO в режиме TIM_3_4_5
+void GPIO_Enable_TIM_3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 {
     GPIO_RCC_Enable(GPIO_port);                                 // Включение тактирования
     GPIO_port->OTYPER &= ~(OTYPER_OPEN_DRAIN << GPIO_pin);      // Push-pull
@@ -231,5 +230,10 @@ void GPIO_Enable_TIM3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
     GPIO_init_AF_Mode(GPIO_port, GPIO_pin, AFR_2);
 }
 
-
-
+// Конфигурация пинов ввода для работы с КМОП-камерой
+void GPIO_Camera_Input_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+{
+    GPIO_RCC_Enable(GPIO_port);
+    GPIO_port->MODER &= ~(MODER_ANALOG << (GPIO_pin * 2));
+    GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));
+}
