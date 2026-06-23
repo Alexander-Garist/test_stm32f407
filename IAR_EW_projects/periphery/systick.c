@@ -36,7 +36,7 @@ void SysTick_Init()
 }
 
 /** Обновление счетчика миллисекунд */
-static void SysTick_Update_ms(void)
+void SysTick_Update_ms(void)
 {
     static uint32_t accumulated_ticks = 0;
     uint32_t current_val = SysTick->VAL;
@@ -77,7 +77,7 @@ static void SysTick_Update_ms(void)
 }
 
 /** Обновление счетчика микросекунд */
-static void SysTick_Update_us(void)
+void SysTick_Update_us(void)
 {
     static uint32_t accumulated_ticks = 0;
     uint32_t current_val = SysTick->VAL;

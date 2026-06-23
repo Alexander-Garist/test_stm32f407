@@ -3,17 +3,15 @@
 #include "systick.h"
 #include "gpio.h"
 #include "i2c.h"
-
 #include "image_processing.h"
-
 
 /**********************************************************************************************************************/
 #define CAM_WIDTH        160
 #define CAM_HEIGHT       120
-#define CAM_FRAME_BYTES  (CAM_WIDTH * CAM_HEIGHT * 2)
+#define CAM_FRAME_BYTES  (CAM_WIDTH * CAM_HEIGHT)
 
 uint8_t camera_buffer[CAM_FRAME_BYTES];
-
+int lines_processed = 0;
 
 typedef struct
 {
@@ -22,266 +20,113 @@ typedef struct
 }
 ov2640_reg_t;
 
-#define PAUSE   {0x00, 0xff}
-
-// Регистры
-#define SELECT_R_TABLE  0xFF
-#define COM1_R          0x03
-#define COM2_R          0x09
-#define COM3_R          0x0C
-#define COM4_R          0x0D
-#define COM7_R          0x12
-#define COM8_R          0x13
-#define COM9_R          0x14
-#define COM10_R         0x15
-#define CLKRC_R         0x11
-#define REG04_R         0x04
-#define ARCOM2_R        0x34
-#define COM19_R         0x48
-
-// Значения регистров
-#define TABLE_0         0x00
-#define TABLE_1         0x01
-#define SYSTEM_RESET    0x80
-
-
-// Настройка регистров OV2640 как в примере
-//const ov2640_reg_t ov2640_config[] =
-//{
-//    /******************************************* Table 1 **************************************************************/
-//    {SELECT_R_TABLE, TABLE_1},
-//    {COM7_R, SYSTEM_RESET},
-//    PAUSE,
-//
-//    /******************************************* Table 0 **************************************************************/
-//    {SELECT_R_TABLE, TABLE_0},
-//    {0x2c, 0xff}, {0x2e, 0xdf},                                             // Reserved registers
-//
-//    /******************************************* Table 1 **************************************************************/
-//    {SELECT_R_TABLE, TABLE_1},
-//    {0x3c, 0x32},                                                           // Reserved registers
-//
-//    {CLKRC_R,   0x01},  // CLK = 12 МГц / (1+1)
-//    {COM2_R,    0x02},  // Выходная пропускная способность
-//    {REG04_R,   0x28},  // Включение HREF
-//    {COM8_R,    0xe5},  // Полосовой фильтр включен
-//    {COM9_R,    0x48},
-//    {0x2c, 0x0c}, {0x33, 0x78}, {0x3a, 0x33}, {0x3b, 0xfb},                 // Reserved registers
-//    {0x3e, 0x00}, {0x43, 0x11}, {0x16, 0x10}, {0x39, 0x92},                 // Reserved registers
-//    {0x35, 0xda}, {0x22, 0x1a}, {0x37, 0xc3}, {0x23, 0x00},                 // Reserved registers
-//    {ARCOM2_R,  0xc0},
-//    {0x36, 0x1a}, {0x06, 0x88}, {0x07, 0xc0},                               // Reserved registers
-//    {COM4_R,    0x87},
-//    {0x0e, 0x41}, {0x4c, 0x00},
-//    {COM19_R,   0x00},
-//    {0x5b, 0x00}, {0x42, 0x03}, {0x4a, 0x81}, {0x21, 0x99},                 // Reserved registers
-//
-//    {0x24, 0x40}, {0x25, 0x38}, {0x26, 0x82},   // AEW AEB VV
-//    {0x5c, 0x00}, {0x63, 0x00},                                             // Reserved registers
-//    {0x61, 0x70}, {0x62, 0x80}, // HISTO_LOW HISTO_HIGH
-//    {0x7c, 0x05}, {0x20, 0x80}, {0x28, 0x30}, {0x6c, 0x00},                 // Reserved registers
-//    {0x6d, 0x80}, {0x6e, 0x00}, {0x70, 0x02}, {0x71, 0x94}, {0x73, 0xc1},   // Reserved registers
-//
-//    {COM7_R,    0x40},
-//    {0x17, 0x11}, {0x18, 0x43}, // HREFST HREFEND
-//    {0x19, 0x00}, {0x1a, 0x4b}, // VSTRT VEND
-//    {0x32, 0x09},               // REG32
-//    {0x37, 0xc0},                                                           // Reserved registers
-//    {0x4f, 0x60}, {0x50, 0xa8}, // BD50 BD60
-//    {0x6d, 0x00}, {0x3d, 0x38},                                             // Reserved registers
-//
-//    {0x46, 0x3f},   // FLL
-//    {0x4f, 0x60},   // BD50
-//    {COM3_R, 0x3c},
-//
-//    /******************************************* Table 0 **************************************************************/
-//    {SELECT_R_TABLE, TABLE_0},
-//    {0xe5, 0x7f},                                                           // Reserved registers
-//    {0xf9, 0xc0},   // MC_BIST
-//    {0x41, 0x24},                                                           // Reserved registers
-//    {0xe0, 0x14},   // RESET
-//    {0x76, 0xff}, {0x33, 0xa0}, {0x42, 0x20}, {0x43, 0x18}, {0x4c, 0x00},   // Reserved registers
-//    {0x87, 0xd5},   // CTRL3
-//    {0x88, 0x3f}, {0xd7, 0x03}, {0xd9, 0x10},                               // Reserved registers
-//    {0xd3, 0x82},   // R_DVP_SP
-//
-//    {0xc8, 0x08}, {0xc9, 0x80},                                             // Reserved registers
-//
-//    {0x7c, 0x00}, {0x7d, 0x00},                             // BPADDR BPDATA
-//    {0x7c, 0x03}, {0x7d, 0x48}, {0x7d, 0x48},               // BPADDR BPDATA
-//    {0x7c, 0x08}, {0x7d, 0x20}, {0x7d, 0x10}, {0x7d, 0x0e}, // BPADDR BPDATA
-//
-//    {0x90, 0x00},                                                           // Reserved registers
-//    {0x91, 0x0e}, {0x91, 0x1a}, {0x91, 0x31}, {0x91, 0x5a}, {0x91, 0x69},   // Reserved registers
-//    {0x91, 0x75}, {0x91, 0x7e}, {0x91, 0x88}, {0x91, 0x8f}, {0x91, 0x96},   // Reserved registers
-//    {0x91, 0xa3}, {0x91, 0xaf}, {0x91, 0xc4}, {0x91, 0xd7}, {0x91, 0xe8},   // Reserved registers
-//    {0x91, 0x20},                                                           // Reserved registers
-//    {0x92, 0x00},                                                           // Reserved registers
-//    {0x93, 0x06}, {0x93, 0xe3}, {0x93, 0x05}, {0x93, 0x05}, {0x93, 0x00},   // Reserved registers
-//    {0x93, 0x04}, {0x93, 0x00}, {0x93, 0x00}, {0x93, 0x00}, {0x93, 0x00},   // Reserved registers
-//    {0x93, 0x00}, {0x93, 0x00}, {0x93, 0x00},                               // Reserved registers
-//    {0x96, 0x00},                                                           // Reserved registers
-//    {0x97, 0x08}, {0x97, 0x19}, {0x97, 0x02}, {0x97, 0x0c}, {0x97, 0x24},   // Reserved registers
-//    {0x97, 0x30}, {0x97, 0x28}, {0x97, 0x26}, {0x97, 0x02}, {0x97, 0x98},   // Reserved registers
-//    {0x97, 0x80}, {0x97, 0x00}, {0x97, 0x00},                               // Reserved registers
-//
-//    {0xc3, 0xed},   // CTRL1
-//    {0xa4, 0x00}, {0xa8, 0x00}, {0xc5, 0x11}, {0xc6, 0x51}, {0xbf, 0x80},   // Reserved registers
-//    {0xc7, 0x10},                                                           // Reserved registers
-//    {0xb6, 0x66}, {0xb8, 0xA5}, {0xb7, 0x64}, {0xb9, 0x7C}, {0xb3, 0xaf},   // Reserved registers
-//    {0xb4, 0x97}, {0xb5, 0xFF}, {0xb0, 0xC5}, {0xb1, 0x94}, {0xb2, 0x0f},   // Reserved registers
-//    {0xc4, 0x5c},                                                           // Reserved registers
-//    {0xc0, 0x64},   // HSIZE
-//    {0xc1, 0x4B},   // VSIZE
-//    {0x8c, 0x00},   // SIZEL
-//    {0x86, 0x3D},   // CTRL2
-//    {0x50, 0x00},   // CTRLI
-//    {0x51, 0xC8},   // HSIZE
-//    {0x52, 0x96},   // VSIZE
-//    {0x53, 0x00},   // XOFFL
-//    {0x54, 0x00},   // YOFFL
-//    {0x55, 0x00},   // VHYX
-//    {0x5a, 0xC8},   // ZMOW
-//    {0x5b, 0x96},   // ZMOH
-//    {0x5c, 0x00},   // ZMHH
-//    {0xd3, 0x82},   // R_DVP_SP
-//    {0xc3, 0xed},   // CTRL1
-//    {0x7f, 0x00}, {0xda, 0x00}, {0xe5, 0x1f}, {0xe1, 0x67},                 // Reserved registers
-//    {0xe0, 0x00},   // RESET
-//    {0xdd, 0x7f},                                                           // Reserved registers
-//    {0x05, 0x00},   // R_BYPASS
-//};
-/**********************************************************************************************************************/
 const ov2640_reg_t ov2640_config[] =
 {
-    // ==================== СБРОС И СТАБИЛИЗАЦИЯ ====================
-    {0xff, 0x01}, // Sensor Bank (Bank 1)
-    {0x12, 0x80}, // Software Reset (Заводской сброс)
-    {0x00, 0xff}, // Пауза на стабилизацию кристалла
+    /*********************************** СБРОС И СТАБИЛИЗАЦИЯ *********************************************************/
+    {0xff, 0x01},   // переход на Table 1
+    {0x12, 0x80},   // программный сброс модуля камеры
+    {0x00, 0xff},   // пауза 100 мс для стабилизации настроек
 
-    // ==================== НАСТРОЙКА МАТРИЦЫ И СИНХРОНИЗАЦИИ (Bank 1) ====================
-    {0xff, 0x01}, // Строго Sensor Bank
-    {0x11, 0x0B}, // CLKRC: Делитель частоты матрицы = 2 (Стабильный аналоговый режим)
-    {0x15, 0x02}, // COM10: Положительная полярность VSYNC
-    {0x04, 0x08}, // REG04: ИСПРАВЛЕНО! Включаем HREF строго в Sensor Bank
+    /***************************** НАСТРОЙКА МАТРИЦЫ И СИНХРОНИЗАЦИИ (Bank 1) *****************************************/
+    {0xff, 0x01},   // переход на Table 1
+/* оставляю значение по умолчанию */    //{0x11, 0x00},   // регистр CLKRC: делитель частоты встроенного кварца камеры
+    {0x15, 0x22},   // регистр COM10: выбрана отрицательная полярность VSYNC, т.е. VSYNC имеет высокий уровень во время кадра, а при начале и завершении кадра становится низким
+    {0x04, 0x08},   // регистр REG04: синхронизация HREF и DCLK
 
-    // ==================== НАСТРОЙКА ЦИФРОВОГО ПОТОКА (Bank 0) ====================
-    {0xff, 0x00}, // Переходим в DSP Bank (Bank 0)
-    {0xe0, 0x04}, // Входим в режим конфигурирования конвейера DVP
+    /***************************** НАСТРОЙКА ЦИФРОВОГО ПОТОКА (Bank 0) ************************************************/
+    {0xff, 0x00},   // переход на Table 0
+    {0xe0, 0x04},   // регистр RESET: сброс модуля DVP
+/* оставляю значение по умолчанию */    //{0xda, 0x00},   // регистр IMAGE_MODE: выбран формат YUV422, порядок битов "старший байт вперед"
+/* оставляю значение по умолчанию */    //{0xc2, 0x0c},   // регистр CTRL0: включение модуля YUV422
+    {0xd3, 0x8C},               // регистр R_DVP_SP: делитель PCLK
+    {0x2c, 0xff}, {0x2e, 0xdf}, // настройка PLL (в даташите помечены как RESERVED)
 
-    {0xda, 0x00}, // IMAGE_MODE: ИСПРАВЛЕНО! Отключаем JPEG, включаем построчный YUV
-    {0xc2, 0x0c}, // CTRL0: ИСПРАВЛЕНО! Активируем процессор обработки YUV422
-    {0xd3, 0x00},
+    /********************************** НАСТРОЙКА ГЕОМЕТРИИ  **********************************************************/
+    {0xc0, 0x14},   // HSIZE: Размер строки QQVGA
+    {0xc1, 0x0f},   // VSIZE: Количество строк QQVGA)
+    {0x86, 0x3d},   // Включение модуля масштабирования
+/* оставляю значение по умолчанию */    //{0x50, 0x00},   // YUV формат входа
+    {0x51, 0xa0},   // H_SIZE[7:0] = 160 (0xA0)
+    {0x52, 0x78},   // V_SIZE[7:0] = 120 (0x78)
+/* оставляю значение по умолчанию */    //{0x57, 0x00},
+    {0xe1, 0x67},   // RESERVED
+    {0xe5, 0x1f},   // RESERVED
+    {0x5a, 0x14},   // Выходная ширина DSP / 10 = 16 (0x10)
+    {0x5b, 0x0f},   // Выходная высота DSP / 10 = 12 (0x0C)
+/* оставляю значение по умолчанию */    //{0x5c, 0x00},
+    {0xd7, 0x03},   // RESERVED
 
-    {0x2c, 0xff}, {0x2e, 0xdf},
-    {0x08, 0x00},
-    {0xc8, 0x06}, // DA_BYTE_EN: Выходная последовательность YUYV
+    /**************************** НАСТРОЙКА МАТРИЦЫ СЕНСОРА (Bank 1) **************************************************/
+    {0xff, 0x01},   // переход на Table 1
+    {0x13, 0xE7},   // COM8: подавления мерцания
+/* оставляю значение по умолчанию */    //{0x14, 0x38},
+/* оставляю значение по умолчанию */    //{0x17, 0x11},   // регистр HREFST
+/* оставляю значение по умолчанию */    //{0x18, 0x43},   // регистр HREFEND
+/* оставляю значение по умолчанию */    //{0x19, 0x00},   // регистр VSTRT
+/* оставляю значение по умолчанию */    //{0x1a, 0x97},   // регистр VEND
+/* оставляю значение по умолчанию */    //{0x32, 0x09},   // Контроль HREF
+    {0x03, 0x06},
 
-    // ==================== МАТРИЦА ГЕОМЕТРИИ (СТРОГО 160x120) ====================
-    {0xc0, 0x28}, // HSIZE: 160 / 4 = 0x28 (Размер строки QQVGA)
-    {0xc1, 0x1E}, // VSIZE: 120 / 4 = 0x1E (Размер кадра по вертикали)
-    {0x86, 0x3d}, {0x50, 0x00},
-    {0x51, 0x90}, {0x52, 0x2c}, {0x53, 0x00}, {0x54, 0x00}, {0x55, 0x00},
-    {0x57, 0x00}, {0x5a, 0xa0}, {0x5b, 0x78}, {0x5c, 0x00}, {0xd7, 0x03},
-    {0xe1, 0x67}, {0xe5, 0x1f}, {0xe7, 0x10}, {0xe8, 0x50}, {0xe9, 0x02},
-    {0xea, 0x40}, {0xee, 0xa0}, {0xef, 0x00},
-
-    {0xff, 0x01}, // Переключаемся в Sensor Bank для фиксации масштабирования
-    {0x12, 0x40}, // COM7: Включение блока Scaling
-    {0x17, 0x11}, {0x18, 0x75}, {0x19, 0x01}, {0x1a, 0x97}, {0x32, 0x36},
-    {0x03, 0x0f}, {0x37, 0x40}, {0x4f, 0xbb}, {0x50, 0x9c}, {0x5a, 0x57},
-    {0x6d, 0x00}, {0x3d, 0x34},
-
-    // ==================== КРИТИЧЕСКИЙ ЗАПУСК КОНВЕЙЕРА ====================
-    {0xff, 0x00}, // Переходим обратно в DSP Bank
-    {0xe0, 0x00}, // ВЫХОД ИЗ СБРОСА! Конвейер запускается, активируя HREF и делитель 0xD3
+    /** запуск конвейера */
+    {0xff, 0x00}, // переход на Table 0
+    {0xe0, 0x04},
+    {0xe0, 0x00},
+    {0xff, 0x01},   // переход на Table 1
+    {0x12, 0x44},   // регистр COM7: выбор разрешения SVGA
     {0x00, 0x00}  // Конец таблицы
 };
 
-
-
-
-
-#define VSYNC_PORT GPIOD
-#define VSYNC_PIN  (1 << 11)
-#define HREF_PORT  GPIOC
-#define HREF_PIN   (1 << 9)
-#define DCLK_PORT  GPIOC
-#define DCLK_PIN   (1 << 10)
+#define VSYNC_PORT      GPIOB
+#define VSYNC_PIN       (1 << 5)
+#define VSYNC_IS_HIGH   (VSYNC_PORT->IDR & VSYNC_PIN)
+#define HREF_PORT       GPIOC
+#define HREF_PIN        (1 << 9)
+#define HREF_IS_HIGH    (HREF_PORT->IDR & HREF_PIN)
+#define DCLK_PORT       GPIOC
+#define DCLK_PIN        (1 << 10)
+#define DCLK_IS_HIGH    (DCLK_PORT->IDR & DCLK_PIN)
 #define DATA_PORT  GPIOE
 
-/** Захват кадра камерой OV2640 */
-//////int ov2640_capture_snapshot(uint8_t *buffer, int width, int height)
-//////{
-//////    GPIO_set_HIGH(GPIOD, 15);   // Загорается синий светодиод для обозначения начала захвата кадра
-//////
-//////    int lines_processed = 0;    // Количество полученных строк
-//////    uint8_t *p_buf = buffer;
-//////
-//////    while (!(VSYNC_PORT->IDR & VSYNC_PIN)); // Ожидание высокого уровня VSYNC
-//////    while (VSYNC_PORT->IDR & VSYNC_PIN);    // Ожидание низкого уровня  VSYNC (старт кадра)
-//////
-//////    for (int y = 0; y < height; y++)
-//////    {
-//////        while (!(HREF_PORT->IDR & HREF_PIN)); // Ожидание начала строки (высокого уровня HREF)
-//////
-//////        for (int x = 0; x < width; x++)
-//////        {
-//////            // Чтение байта яркости (Y)
-//////            while (!(DCLK_PORT->IDR & DCLK_PIN));
-//////            while (DCLK_PORT->IDR & DCLK_PIN);
-//////
-//////            __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-//////            __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
-//////            *p_buf++ = (uint8_t)((DATA_PORT->IDR >> 8) & 0xFF);
-//////
-//////            // Пропуск байта цветности (U/V)
-//////            while (!(DCLK_PORT->IDR & DCLK_PIN));
-//////            while (DCLK_PORT->IDR & DCLK_PIN);
-//////        }
-//////        lines_processed++;
-//////        while (HREF_PORT->IDR & HREF_PIN); // Ждем конца строки
-//////    }
-//////    GPIO_set_LOW(GPIOD, 15);    // Гаснет синий светодиод для обозначения окончания захвата кадра
-//////    return lines_processed;
-//////}
-
-/**
- * Захват полного кадра OV2640 в формате YUV422 (38400 байт для 160x120)
- * buffer должен иметь размер не менее width * height * 2
- */
 int ov2640_capture_snapshot(uint8_t *buffer, int width, int height)
 {
-    // Включаем синий светодиод — начало захвата
     GPIO_set_HIGH(GPIOD, 15);
-
     int lines_processed = 0;
     uint8_t *p_buf = buffer;
 
-    // Синхронизация по кадру
-    while (VSYNC_PORT->IDR & VSYNC_PIN);    // дождаться окончания текущего кадра
-    while (!(VSYNC_PORT->IDR & VSYNC_PIN)); // дождаться пока начнется новый кадр
+    // 1. Синхронизация по кадру
+    while (VSYNC_PORT->IDR & VSYNC_PIN);    // Ждем окончания текущего кадра
+    while (!(VSYNC_PORT->IDR & VSYNC_PIN)); // Ждем начала нового кадра
 
-    // Кадр принимается пока VSYNC высокий
-    while (VSYNC_PORT->IDR & VSYNC_PIN)
+    // 2. Читаем строго первые 120 строк, которые нам нужны
+    for (int y = 0; y < height; y++)
     {
-        // для каждой строки кадра:
-        // дождаться начала строки (HREF станет 1)
-        // пока HREF не станет 0 данные должны приниматься
-
-        // Ожидание начала строки (HREF становится HIGH)
+        // Ожидание старта физической строки (HREF -> 1)
         while (!(HREF_PORT->IDR & HREF_PIN));
-        while(HREF_PORT->IDR & HREF_PIN)
+
+        // Вычитываем первые 160 пикселей (из 320 доступных).
+        // 1 пиксель = 1 байт яркости Y (сохраняем) + 1 байт цветности U/V (пропускаем)
+        for (int x = 0; x < width; x++)
         {
-            while (DCLK_PORT->IDR & DCLK_PIN);
-            *p_buf++ = (uint8_t)(DATA_PORT->IDR >> 8);
+            // --- ЧТЕНИЕ БАЙТА ЯРКОСТИ (Y) ---
             while (!(DCLK_PORT->IDR & DCLK_PIN));
+            *p_buf++ = (uint8_t)((GPIOE->IDR >> 8) & 0xFF);
+            while (DCLK_PORT->IDR & DCLK_PIN);
+
+            // --- ПРОПУСК БАЙТА ЦВЕТНОСТИ (U/V) ---
+            while (!(DCLK_PORT->IDR & DCLK_PIN));
+            while (DCLK_PORT->IDR & DCLK_PIN);
         }
+        lines_processed++;
+
+        // КРИТИЧЕСКИЙ ШАГ: Сливаем оставшиеся 480 импульсов DCLK этой строки!
+        // Процессор просто ждет, пока синий сигнал HREF упадет в 0,
+        // игнорируя весь остаток строки и Dummy-пиксели камеры.
+        while (HREF_PORT->IDR & HREF_PIN);
     }
 
-    // Гасим синий светодиод — захват окончен
+    // После того как мы собрали 120 строк, на камере останется еще ~180 строк кадра.
+    // Мы их просто игнорируем и выходим из функции — светодиод гаснет.
     GPIO_set_LOW(GPIOD, 15);
-
     return lines_processed;
 }
 
@@ -289,38 +134,60 @@ int ov2640_capture_snapshot(uint8_t *buffer, int width, int height)
 
 
 
-/**********************************************************************************************************************/
+// Во время ожидания конца кадра или чего-то подобного (цикл while) обязательно обновлять счетчик мс!
 
-// Повышение контрастности кадра
-void image_enhance_contrast(const uint8_t *src, uint8_t *dst, int width, int height)
+uint32_t frame_start_us = 0;        // Момент начала кадра в мкс (VSYNC стал высоким)
+uint32_t frame_end_us = 0;          // Момент конца кадра в мкс (VSYNC стал низким)
+uint32_t frame_duration_us = 0;     // Длительность кадра в мкс
+
+uint32_t raw_start_us = 0;          // Момент начала строки в мкс (HREF стал высоким)
+uint32_t raw_end_us = 0;            // Момент конца строки в мкс (HREF стал низким)
+uint32_t raw_duration_us = 0;       // Длительность строки в мкс
+
+uint32_t raws = 0;      // Количество строк пикселей в кадре
+uint32_t columns = 0;   // Количество столбцов пикселей в кадре
+
+
+// Посчитать пиксели в 1 кадре
+void count_pixels_in_frame()
 {
-    uint8_t min_val = 255;
-    uint8_t max_val = 0;
-    int size = width * height;
+    GPIO_set_HIGH(GPIOD, 12);   // Во время подсчета строк/пикселей в кадре загорается зеленый светодиод
 
-    // 1. Находим реальный минимум и максимум в темном кадре
-    for (int i = 0; i < size; i++)
+    /** Дождаться конца текущего начатого кадра, затем подождать паузу между кадрами */
+    while (VSYNC_IS_HIGH) {SysTick_Update_us();}    // Ожидание пока уровень высокий (начатый кадр должен закончиться)
+    while (!VSYNC_IS_HIGH) {SysTick_Update_us();}   // Ожидание пока уровень низкий (пауза между кадрами должна закончиться)
+
+    /** Кадр начался, VSYNC сейчас высокий, HREF еще низкий */
+    frame_start_us = get_current_us();      // Начало кадра в мкс
+    raws = 0;                               // Обнуление счетчика строк в кадре
+
+    /** Ожидание окончания кадра */
+    while (VSYNC_IS_HIGH)
     {
-        if (src[i] < min_val) min_val = src[i];
-        if (src[i] > max_val) max_val = src[i];
+        while (!HREF_IS_HIGH)       // Ожидание начала строки (HREF должен стать высоким)
+        {
+            if (!VSYNC_IS_HIGH) break;
+        }
+        if (!VSYNC_IS_HIGH) break;
+
+        /** Строка началась, HREF высокий */
+        SysTick_Update_us();
+        raw_start_us = get_current_us();    // Начало строки в мкс
+        while (HREF_IS_HIGH);               // Ожидание окончания строки (HREF должен стать низким)
+
+        SysTick_Update_us();
+        raw_end_us = get_current_us();                  // Конец строки в мкс
+        raw_duration_us = raw_end_us - raw_start_us;    // Длительность строки в мкс
+
+        raws++;
     }
 
-    // Защита от деления на ноль, если кадр абсолютно однороден
-    int delta = max_val - min_val;
-    if (delta == 0) delta = 1;
+    SysTick_Update_us();
+    frame_end_us = get_current_us();                                // Конец кадра в мкс
+    frame_duration_us = frame_end_us - frame_start_us;              // Длительность кадра в мкс
 
-    // 2. Растягиваем гистограмму яркости до 0..255
-    for (int i = 0; i < size; i++)
-    {
-        int brightened = ((src[i] - min_val) * 255) / delta;
-        dst[i] = (uint8_t)brightened;
-    }
+    GPIO_set_LOW(GPIOD, 12);
 }
-
-
-
-
-
 
 
 int main(void)
@@ -343,8 +210,6 @@ int main(void)
     GPIO_Camera_Input_Enable(GPIOE, 14);  // D6
     GPIO_Camera_Input_Enable(GPIOE, 15);  // D7
 
-
-
     // Инициализация I2C2
     I2C_Enable(I2C2);
     GPIO_Enable_I2C(GPIOB, 10); // SCL
@@ -357,7 +222,6 @@ int main(void)
     GPIO_set_HIGH(GPIOB, 1); // RESET = 1
     delay_ms(300);
 
-    /** ================= БЛОК ПРОВЕРКИ АППАРАТНОГО ID КАМЕРЫ ================= */
     uint8_t pid_val = 0;
     uint8_t ver_val = 0;
     I2C_Status_t I2C_status;
@@ -369,19 +233,19 @@ int main(void)
     if (I2C_status == I2C_OK) I2C_status = I2C_Read_Reg(I2C2, 0x30, 0x0A, &pid_val);
     if (I2C_status == I2C_OK) I2C_status = I2C_Read_Reg(I2C2, 0x30, 0x0B, &ver_val);
 
-    // Если нет физического контакта I2C или ID не совпадает — БЫСТРОЕ мигание КРАСНОГО
+    // Если нет физического контакта I2C или ID не совпадает — мигание красного светодиода
     if (I2C_status != I2C_OK || pid_val != 0x26 || ver_val != 0x42)
     {
-        while(1) {
+        while(1)
+        {
             GPIO_toggle_Pin(GPIOD, 14);
             delay_ms(50);
         }
     }
-    /** ============================================================ */
 
     // Запись регистров по I2C
     uint32_t reg_idx = 0;
-    while (ov2640_config[reg_idx].reg != 0x00 || ov2640_config[reg_idx].val != 0x00)
+    while (!(ov2640_config[reg_idx].reg == 0x00 && ov2640_config[reg_idx].val == 0x00))
     {
         uint8_t reg = ov2640_config[reg_idx].reg;
         uint8_t val = ov2640_config[reg_idx].val;
@@ -411,23 +275,11 @@ int main(void)
 
     // Синий светодиод горит стабильно => Конфигурация записана
     GPIO_set_HIGH(GPIOD, 15);
-    delay_ms(50);
+    delay_ms(1000);
 
     while(1)
     {
-
-        int lines_read = ov2640_capture_snapshot((uint8_t*)camera_buffer, 160, 120);
-
-        if (lines_read < 120)
-        {
-            GPIO_toggle_Pin(GPIOD, 14);
-            GPIO_set_LOW(GPIOD, 15);
-        }
-
-//        uint8_t binary_buffer[CAM_FRAME_BYTES];
-//        wolf_binarization_mcu(camera_buffer, binary_buffer, 160, 120, 9, 0.5f);
-
+        count_pixels_in_frame();
         delay_ms(1000);
-
     }
 }

@@ -77,4 +77,13 @@ void SysTick_Handler(void);
     */
 void Clock_Config_168MHz_HSI(void);
 
+/** Обновление счетчика миллисекунд */
+void SysTick_Update_ms(void);
+
+/** Обновление счетчика микросекунд */
+void SysTick_Update_us(void);
+
+
+
+
 #endif /*__SYSTICK_H__ */

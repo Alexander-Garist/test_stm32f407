@@ -14,7 +14,7 @@ def load_hex_file(file_path):
     is_intel_hex = any(line.strip().startswith(':') for line in lines)
     
     if is_intel_hex:
-        print("[ℹ️] Обнаружен стандартный формат Intel HEX. Извлечение данных...")
+        print("Обнаружен Intel HEX. Извлечение данных...")
         data_dict = {}
         base_address = 0
         
@@ -46,56 +46,37 @@ def load_hex_file(file_path):
         return bytes([data_dict[addr] for addr in sorted_addresses])
         
     else:
-        print("[ℹ️] Обнаружен текстовый Hex-дамп (набор байт). Очистка от мусора...")
-        # Если это простой лог/текст, убираем пробелы, скобки, "0x" и склеиваем
+        print("Обнаружен текстовый Hex-дамп (набор байт). Очистка от мусора...")
         full_text = "".join(lines)
         hex_chars = re.sub(r'[^0-9a-fA-F]', '', full_text)
         if not hex_chars:
             raise ValueError("В текстовом файле не найдено валидных Hex-символов.")
         return bytes.fromhex(hex_chars)
 
-def yuv422_to_bmp(hex_input_path, bmp_output_path, width=160, height=120):
-    # 1. Извлечение бинарного массива из текстового HEX
+def y_only_to_bmp(hex_input_path, bmp_output_path, width=160, height=120):
+    # 1. Извлечение бинарного массива из HEX
     try:
-        yuv_data = load_hex_file(hex_input_path)
+        y_data = load_hex_file(hex_input_path)
     except Exception as e:
-        print(f"[❌] Критическая ошибка при чтении HEX: {e}")
+        print(f"Критическая ошибка при чтении HEX: {e}")
         return
 
-    expected_size = width * height * 2 # Для 160x120 это ровно 38400 байт
-    print(f"[ℹ️] Успешно извлечено: {len(yuv_data)} байт из дампа.")
+    expected_size = width * height  # Для 160x120 чисто по яркости это ровно 19200 байт
+    print(f"Успешно извлечено: {len(y_data)} байт из дампа.")
     
-    if len(yuv_data) < expected_size:
-        print(f"[⚠️] Внимание: байт меньше нормы ({len(yuv_data)} < {expected_size}). Дописываем нули...")
-        yuv_data += b'\x00' * (expected_size - len(yuv_data))
-    elif len(yuv_data) > expected_size:
-        print(f"[ℹ️] Дамп больше кадра. Обрезаем лишнее до {expected_size} байт.")
-        yuv_data = yuv_data[:expected_size]
+    if len(y_data) < expected_size:
+        print(f"Внимание: байт меньше нормы ({len(y_data)} < {expected_size}). Дописываем нули.")
+        y_data += b'\x00' * (expected_size - len(y_data))
+    elif len(y_data) > expected_size:
+        print(f"Дамп больше кадра ({len(y_data)} > {expected_size}). Обрезаем лишнее до размера одного кадра.")
+        y_data = y_data[:expected_size]
 
     rgb_bytes = bytearray()
     
-    # 2. Декодирование макропикселей YUV422 (Y0, U0, Y1, V0) -> 2 пикселя RGB
-    for i in range(0, expected_size, 4):
-        y0 = yuv_data[i]
-        u  = yuv_data[i+1]
-        y1 = yuv_data[i+2]
-        v  = yuv_data[i+3]
-        
-        c = u - 128
-        d = v - 128
-        
-        # Точка 1 (Y0)
-        r0 = max(0, min(255, int(y0 + 1.402 * d)))
-        g0 = max(0, min(255, int(y0 - 0.344136 * c - 0.714136 * d)))
-        b0 = max(0, min(255, int(y0 + 1.772 * c)))
-        
-        # Точка 2 (Y1)
-        r1 = max(0, min(255, int(y1 + 1.402 * d)))
-        g1 = max(0, min(255, int(y1 - 0.344136 * c - 0.714136 * d)))
-        b1 = max(0, min(255, int(y1 + 1.772 * c)))
-        
-        # Запись в структуру BMP (строгий формат BGR)
-        rgb_bytes.extend([b0, g0, r0, b1, g1, r1])
+    # 2. Преобразование Y-компоненты в градации серого BGR
+    # Каждый байт дублируется во все три канала: синий, зеленый, красный
+    for y_val in y_data:
+        rgb_bytes.extend([y_val, y_val, y_val])
 
     # 3. Сборка стандартного заголовка BMP (54 байта)
     file_size = 54 + len(rgb_bytes)
@@ -108,14 +89,14 @@ def yuv422_to_bmp(hex_input_path, bmp_output_path, width=160, height=120):
         f.write(header)
         f.write(rgb_bytes)
         
-    print(f"[✅] BMP картинка создана: {bmp_output_path}")
+    print(f"Черно-белая BMP картинка создана: {bmp_output_path}")
 
 # ==================== НАСТРОЙКИ ПЕРЕД ЗАПУСКОМ ====================
 HEX_FILE_NAME = 'memory.hex'   # Имя вашего файла с дампом из STM32
-OUTPUT_BMP_NAME = 'decoded_cam.bmp' # Имя файла, который создаст скрипт
+OUTPUT_BMP_NAME = 'decoded_mono.bmp' # Имя выходного ЧБ файла
 
 if __name__ == '__main__':
     if os.path.exists(HEX_FILE_NAME):
-        yuv422_to_bmp(HEX_FILE_NAME, OUTPUT_BMP_NAME, width=160, height=120)
+        y_only_to_bmp(HEX_FILE_NAME, OUTPUT_BMP_NAME, width=160, height=120)
     else:
-        print(f"[❌] Ошибка: Файл '{HEX_FILE_NAME}' не найден в текущей папке скрипта!")
+        print(f"Ошибка: Файл '{HEX_FILE_NAME}' не найден в текущей папке скрипта!")
