@@ -35,9 +35,9 @@ static void I2C_Init_Pin(I2C_TypeDef* I2Cx)
     delay_ms(1);
     I2Cx->CR1 &= ~I2C_CR1_SWRST;	// Сброс регистра программного сброса
 
-    I2Cx->CR2 = 16;     // Установка частоты периферийных устройств (0x10 == 16 МГц)
-    I2Cx->CCR = 80;     // Установка частоты I2C 400 кГц     половина частоты APB / желаемая частота : 8 000 000 / 400 000 = 20
-    I2Cx->TRISE = 6;    // Максимальное время подъема SCL
+    I2Cx->CR2 = 42;     // Установка частоты периферийных устройств в МГц
+    I2Cx->CCR = 210;     // Установка частоты I2C 100 кГц   CCR =  половина частоты APB1 / желаемая частота I2C
+    I2Cx->TRISE = 43;    // Максимальное время подъема SCL
 
     I2Cx->CR1 |= I2C_CR1_PE;    // Включение I2C (Peripheral Enable)
     delay_ms(10);
@@ -191,25 +191,21 @@ I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr, uint8_t* I2C_d
 I2C_Status_t I2C_Write_Reg(I2C_TypeDef * I2Cx, uint8_t I2C_device_addr, uint8_t reg_addr, uint8_t value)
 {
     uint8_t buffer[2];
-    buffer[0] = reg_addr; // Первый байт — это всегда адрес регистра
-    buffer[1] = value;    // Второй байт — значение
+    buffer[0] = reg_addr;
+    buffer[1] = value;
 
-    // Передаем 2 байта через вашу стандартную функцию
     return I2C_Write(I2Cx, I2C_device_addr, buffer, 2);
 }
 
-I2C_Status_t I2C_Read_Reg(I2C_TypeDef * I2Cx, uint8_t I2C_device_addr, uint8_t reg_addr, uint8_t * reg_data) {
+I2C_Status_t I2C_Read_Reg(I2C_TypeDef * I2Cx, uint8_t I2C_device_addr, uint8_t reg_addr, uint8_t * reg_data)
+{
     I2C_Status_t status;
 
-    // Шаг 1: Отправляем камере адрес регистра, который хотим прочесть (1 байт)
     status = I2C_Write(I2Cx, I2C_device_addr, &reg_addr, 1);
-    if (status != I2C_OK) {
+    if (status != I2C_OK)
+    {
         return status;
     }
-
-    // Шаг 2: Читаем из камеры ответное значение (1 байт)
-    // Протокол SCCB требует полноценного STOP после записи и нового START перед чтением,
-    // раздельные вызовы ваших функций I2C_Write и I2C_Read обеспечат это автоматически.
     return I2C_Read(I2Cx, I2C_device_addr, reg_data, 1);
 }
 

@@ -2,16 +2,10 @@
 #ifndef __IMAGE_PROCESSING_H__
 #define __IMAGE_PROCESSING_H__
 
+/** Увеличить контрастность темного изображения */
+void ImageProcessing_increase_image_contrast(uint8_t *buffer, uint32_t size);
 
-// Алгоритм бинаризации Брэдли с использованием интегральной суммы
-void bradley_threshold_integral(const unsigned char* src, unsigned char* res, int width, int height);
-
-// Алгоритм бинаризации Брэдли без использования интегральной суммы
-void bradley_threshold_mcu_fast(const unsigned char* src, unsigned char* res, int width, int height);
-
-
-// Функция бинаризации Вульфа (для получения большей контрастности результата) без использования динамической памяти
-//void wolf_binarization_mcu(const unsigned char *src, unsigned char *dst, int window_size, float k_param);
-void wolf_binarization_mcu(const uint8_t *src, uint8_t *dst, int width, int height, int window_size, float k_param);
-
+/** Бинаризация изображения */
+void ImageProcessing_binarize_image(uint8_t *buffer, uint32_t size);
+void ImageProcessing_binarize_adaptive_local(uint8_t *buffer, int width, int height);
 #endif /* __IMAGE_PROCESSING_H__ */

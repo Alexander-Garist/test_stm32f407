@@ -59,7 +59,7 @@ static void GPIO_init_INPUT(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 
 	// Начальный сброс и установка значения регистра PUPDR
     GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));
-    //GPIO_port->PUPDR |= (PUPDR_PD << (GPIO_pin * 2));
+    GPIO_port->PUPDR |= (PUPDR_NO_PUPD << (GPIO_pin * 2));
 }
 
 // Инициализация пина в режиме альтернативной функции
@@ -120,7 +120,7 @@ void GPIO_Button_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
     GPIO_init_INPUT(GPIO_port, GPIO_pin);		// Инициализация ввода GPIO
 }
 
-
+// Чтение логического уровня выбранного пина.
 uint8_t GPIO_Read_Pin(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 {
 	return ((GPIO_port->IDR) >> GPIO_pin) & 1;
@@ -234,6 +234,5 @@ void GPIO_Enable_TIM_3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 void GPIO_Camera_Input_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
 {
     GPIO_RCC_Enable(GPIO_port);
-    GPIO_port->MODER &= ~(MODER_ANALOG << (GPIO_pin * 2));
-    GPIO_port->PUPDR &= ~(PUPDR_RESERVED << (GPIO_pin * 2));
+    GPIO_init_INPUT(GPIO_port, GPIO_pin);
 }

@@ -10,12 +10,44 @@
 #include "systick.h"
 #include "string.h"
 
-/** Defines ***********************************************************************************************************/
 // Частоты шин APB1 APB2
-#define freq_APB1	16000000
-#define freq_APB2	16000000
+static uint32_t freq_APB1, freq_APB2;
 
 /***************************************** Статические функции ********************************************************/
+// Определить делители частот APB1 APB2
+static void get_prescalers()
+{
+    uint32_t ppre1, ppre2;
+
+    uint32_t PPRE1 = RCC->CFGR; // 32 бита регистра
+    PPRE1 >>= 10;               // Сдвиг на 10 бит вправо
+    PPRE1 &= 0x7;               // Наложение маски 0b0111, теперь это значение PPRE1
+
+    uint32_t PPRE2 = RCC->CFGR; // 32 бита регистра
+    PPRE2 >>= 13;               // Сдвиг на 13 бит вправо
+    PPRE2 &= 0x7;               // Наложение маски 0b0111, теперь это значение PPRE2
+
+    switch (PPRE1)
+    {
+        case 0x4:   ppre1 = 2; break;
+        case 0x5:   ppre1 = 4; break;
+        case 0x6:   ppre1 = 8; break;
+        case 0x7:   ppre1 = 16; break;
+        default:    ppre1 = 1; break;
+    }
+
+    switch (PPRE2)
+    {
+        case 0x4:   ppre2 = 2; break;
+        case 0x5:   ppre2 = 4; break;
+        case 0x6:   ppre2 = 8; break;
+        case 0x7:   ppre2 = 16; break;
+        default:    ppre2 = 1; break;
+    }
+
+    freq_APB1 = SystemCoreClock / ppre1;
+    freq_APB2 = SystemCoreClock / ppre2;
+}
 
 // Включение тактирования модуля UART/USART
 static void USART_RCC_Enable(USART_TypeDef* USARTx)
@@ -31,6 +63,8 @@ static void USART_RCC_Enable(USART_TypeDef* USARTx)
 // Настройка регистра BRR и включение модуля USARTx
 static void USART_Init(USART_TypeDef* USARTx, uint32_t baudrate)
 {
+    get_prescalers();
+
 	/** Настройка регистра BRR (Baud rate register)
 	*	APB1 для USART 2/3 UART 4/5
 	*	APB2 для USART 1/6
@@ -46,7 +80,7 @@ static void USART_Init(USART_TypeDef* USARTx, uint32_t baudrate)
 	}
 
 	// Включение USARTx: TX, RX
-    USARTx->CR1 = USART_CR1_TE 			// Transmitter enable
+    USARTx->CR1 |= USART_CR1_TE 			// Transmitter enable
 				| USART_CR1_RE;			// Receiver enable
 
     USARTx->CR1 |= USART_CR1_UE;		// USART enable
@@ -144,6 +178,20 @@ USART_Status_t USART_Transmit(USART_TypeDef* USARTx, char* data, uint32_t size)
 	}
 	return USART_OK;
 }
+
+// Функция побайтной отправки size байт данных по USART
+USART_Status_t USART_Transmit_UINT8(USART_TypeDef* USARTx, uint8_t* data, uint32_t size)
+{
+	// добавить таймаут отправки
+	// если не отправлено до таймаута, выкинуть ошибку USART_ERROR_TRANSMIT
+	for (uint32_t index = 0; index < size; index++)
+	{
+		while (!(USARTx->SR & USART_SR_TXE));	// Ожидание пока буфер передатчика освободится
+		USARTx->DR = data[index];				// Отправка 1 символа
+	}
+	return USART_OK;
+}
+
 
 // Побайтный прием из USART до стопового байта
 USART_Status_t USART_Receive(USART_TypeDef* USARTx, char* buffer, char STOP_BYTE)

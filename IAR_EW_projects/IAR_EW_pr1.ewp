@@ -2234,4 +2234,10 @@
     <file>
         <name>$PROJ_DIR$\main.c</name>
     </file>
+    <file>
+        <name>$PROJ_DIR$\ov2640.c</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\ov2640.h</name>
+    </file>
 </project>

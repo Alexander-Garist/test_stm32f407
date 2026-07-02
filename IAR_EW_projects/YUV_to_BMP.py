@@ -1,19 +1,18 @@
 from PIL import Image
 import os
 
-# ==================== НАСТРОЙКИ СНИМКА ====================
-BIN_FILE_NAME = 'snapshot.bin'      # Имя вашего бинарного файла из МК
-OUTPUT_BMP_NAME = 'result.bmp'       # Имя готовой картинки
+#BIN_FILE_NAME = 'ov2640_frame.bin'
+#OUTPUT_BMP_NAME = 'ov2640_frame.bmp'
 WIDTH = 400
 HEIGHT = 250
 
-def convert_bin_to_bmp():
-    if not os.path.exists(BIN_FILE_NAME):
-        print(f"Ошибка: Файл '{BIN_FILE_NAME}' не найден!")
+def convert_bin_to_bmp(bin_filename, bmp_filename):
+    if not os.path.exists(bin_filename):
+        print(f"Ошибка: Файл '{bin_filename}' не найден!")
         return
 
-    # 1. Читаем бинарный файл напрямую в память
-    with open(BIN_FILE_NAME, 'rb') as f:
+    # 1. Чтение бинарного файл напрямую в память
+    with open(bin_filename, 'rb') as f:
         raw_bytes = f.read()
 
     expected_size = WIDTH * HEIGHT
@@ -27,15 +26,17 @@ def convert_bin_to_bmp():
         print("Внимание: Файл больше кадра. Обрезаем лишнее.")
         raw_bytes = raw_bytes[:expected_size]
 
-    # 3. Создаем изображение в градациях серого ('L' - Luminance) из байт
+    # 3. Изображение в градациях серого ('L' - Luminance) из байт
     img = Image.frombytes('L', (WIDTH, HEIGHT), raw_bytes)
 
-    # 4. Сохраняем как стандартный BMP (или .png / .jpg)
-    img.save(OUTPUT_BMP_NAME)
-    print(f"Успешно сохранено в {OUTPUT_BMP_NAME}")
+    # 4. Сохранить как стандартный BMP
+    img.save(bmp_filename)
+    print(f"Успешно сохранено в {bmp_filename}")
     
-    # Бонус: автоматически открыть готовую картинку на экране ПК
+    # Автоматически открыть готовую картинку на экране ПК
     img.show()
 
 if __name__ == '__main__':
-    convert_bin_to_bmp()
+    convert_bin_to_bmp('ov2640_frame.bin', 'ov2640_frame.bmp')
+    convert_bin_to_bmp('ov2640_frame_high_contrast.bin', 'ov2640_frame_high_contrast.bmp')
+    convert_bin_to_bmp('ov2640_frame_binarized.bin', 'ov2640_frame_binarized.bmp')

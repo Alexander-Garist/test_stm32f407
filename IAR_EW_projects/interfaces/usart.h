@@ -88,6 +88,9 @@ USART_Status_t USART_Transmit(
 	uint32_t		size
 );
 
+USART_Status_t USART_Transmit_UINT8(USART_TypeDef* USARTx, uint8_t* data, uint32_t size);
+
+
 	/**
 	! Прием данных по UART/USART.
 	- USARTx - выбранный модуль UART/USART.
