@@ -227,8 +227,6 @@ void ov2640_Init(uint8_t device_address)
 */
 int ov2640_capture_snapshot(uint8_t *buffer, int width, int height)
 {
-    GPIO_set_HIGH(GPIOD, 12); // Начало захвата кадра
-
     int lines_processed = 0;
     uint8_t *p_buf = buffer;
 
@@ -265,16 +263,12 @@ int ov2640_capture_snapshot(uint8_t *buffer, int width, int height)
 
         while (HREF_IS_HIGH);   // Ожидание конца строки
     }
-
-    GPIO_set_LOW(GPIOD, 12); // Кадр собран
     return lines_processed;
 }
 
 /** Определить длительность кадра, длительность строки, количество строк и количество байт в строке */
 void ov2640_count_pixels_in_frame()
 {
-    GPIO_set_HIGH(GPIOD, 12);   // Включаем зеленый светодиод
-
     /** 1. Синхронизация по кадру */
     while (VSYNC_IS_HIGH) {SysTick_Update_us();}
     while (!VSYNC_IS_HIGH) {SysTick_Update_us();}
@@ -325,8 +319,6 @@ void ov2640_count_pixels_in_frame()
     SysTick_Update_us();
     frame_end_us = get_current_us();
     frame_duration_us = frame_end_us - frame_start_us;
-
-    GPIO_set_LOW(GPIOD, 12);
 }
 
 /** Получить ID камеры */

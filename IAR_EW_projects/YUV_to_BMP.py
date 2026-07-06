@@ -1,10 +1,8 @@
 from PIL import Image
 import os
 
-#BIN_FILE_NAME = 'ov2640_frame.bin'
-#OUTPUT_BMP_NAME = 'ov2640_frame.bmp'
-WIDTH = 400
-HEIGHT = 250
+WIDTH = 80
+HEIGHT = 60
 
 def convert_bin_to_bmp(bin_filename, bmp_filename):
     if not os.path.exists(bin_filename):
@@ -37,6 +35,7 @@ def convert_bin_to_bmp(bin_filename, bmp_filename):
     img.show()
 
 if __name__ == '__main__':
+    convert_bin_to_bmp('EXAMPLE.bin', 'EXAMPLE.bmp')
     convert_bin_to_bmp('ov2640_frame.bin', 'ov2640_frame.bmp')
     convert_bin_to_bmp('ov2640_frame_high_contrast.bin', 'ov2640_frame_high_contrast.bmp')
     convert_bin_to_bmp('ov2640_frame_binarized.bin', 'ov2640_frame_binarized.bmp')

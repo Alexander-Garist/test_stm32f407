@@ -49,8 +49,7 @@ def compare_symbols_with_shift_tolerance(img_ideal_path, img_current_path, max_s
     print(f"Площадь символов кадра: {int(area_current)} пикс.")
     print(f"Максимальное совпадение контуров при наложении: {score:.4f}")
 
-    # 5. Проверка порога
-    # Для этого метода 0.75 - 0.85 — это железное, бритвенно-точное совпадение символов
+    # 5. Проверка порога    
     if score >= threshold:
         print("Изображения совпадают! (Символы найдены и соответствуют эталону)")
     else:
@@ -61,5 +60,5 @@ def mask_current_shifted_matrix_flipped(matrix):
 
 if __name__ == '__main__':
     # THRESHOLD = 0.80 означает, что 80% черных линий символов должны совпасть при наложении
-    compare_symbols_with_shift_tolerance('ov2640_frame_EXAMPLE.bmp', 'ov2640_frame_binarized.bmp', threshold=0.80)
+    compare_symbols_with_shift_tolerance('EXAMPLE.bmp', 'ov2640_frame_binarized.bmp', threshold=0.80)
     input()

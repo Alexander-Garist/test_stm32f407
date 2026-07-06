@@ -8,4 +8,8 @@ void ImageProcessing_increase_image_contrast(uint8_t *buffer, uint32_t size);
 /** Бинаризация изображения */
 void ImageProcessing_binarize_image(uint8_t *buffer, uint32_t size);
 void ImageProcessing_binarize_adaptive_local(uint8_t *buffer, int width, int height);
+
+/** Сравнение 2 изображений методом свертки */
+float ImageProcessing_Compare_by_Convolution(uint8_t* example_array, uint8_t* array, uint32_t size);
+
 #endif /* __IMAGE_PROCESSING_H__ */

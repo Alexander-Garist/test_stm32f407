@@ -30,7 +30,7 @@ define symbol __ICFEDIT_region_BKPR_start__   = 0x40024000;
 define symbol __ICFEDIT_region_BKPR_end__     = 0x40024FFF;
 /*-Sizes-*/
 define symbol __ICFEDIT_size_cstack__ = 0xC000;
-define symbol __ICFEDIT_size_heap__   = 0x2000;
+define symbol __ICFEDIT_size_heap__   = 0x0000;
 /**** End of ICF editor section. ###ICF###*/
 
 define memory mem with size = 4G;
