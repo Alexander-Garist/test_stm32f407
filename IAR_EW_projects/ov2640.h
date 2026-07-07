@@ -3,8 +3,11 @@
 
 #include <stdint.h>
 
-#define CAM_WIDTH        80                        // в 1 строке 800 байт €ркости и цветности, нужна только €ркость дл€ „Ѕ
-#define CAM_HEIGHT       60                        // количество строк не изменитс€
+#define RESOLUTION_X    800
+#define RESOLUTION_Y    400
+
+#define CAM_WIDTH        (RESOLUTION_X / 2)         // в 1 строке 800 байт €ркости и цветности, нужна только €ркость дл€ „Ѕ
+#define CAM_HEIGHT       (RESOLUTION_Y / 2)         // захватываетс€ только нечетна€ строка, тк четна€ темна€
 #define CAM_FRAME_BYTES  (CAM_WIDTH * CAM_HEIGHT)   // размер массива дл€ €ркости пикселей 1 кадра
 
 #define VSYNC_PORT      GPIOB

@@ -262,6 +262,10 @@ int ov2640_capture_snapshot(uint8_t *buffer, int width, int height)
         lines_processed++;
 
         while (HREF_IS_HIGH);   // ќжидание конца строки
+
+        /** пропуск темной строки */
+        while (!HREF_IS_HIGH);  // ќжидание начала строки
+        while (HREF_IS_HIGH);   // ќжидание конца строки
     }
     return lines_processed;
 }

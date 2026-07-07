@@ -154,14 +154,12 @@ static float sum_squares_deviations(float* array_deviations)
 /**********************************************************************************************************************/
 
 /** Сравнение 2 изображений методом свертки */
-float ImageProcessing_Compare_by_Convolution(uint8_t* example_array, uint8_t* array, uint32_t size)         // size пока что 100000, но придется уменьшить
+float ImageProcessing_Compare_by_Convolution(uint8_t* example_array, uint8_t* array, float* deviation_X, float* deviation_Y, uint32_t size)
 {
     float correlation_coefficient;
 
     float average_X = get_average_value(example_array, size);   // Среднее значение исходного массива X (образец сравнения)
     float average_Y = get_average_value(array, size);           // Среднее значение исходного массива X (сравниваемый кадр)
-
-    float deviation_X[19200], deviation_Y[19200]; // Массивы отклонений от средних значений
 
     for (uint32_t index = 0; index < size; index++)
     {

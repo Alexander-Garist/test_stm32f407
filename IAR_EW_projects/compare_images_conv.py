@@ -60,5 +60,5 @@ def mask_current_shifted_matrix_flipped(matrix):
 
 if __name__ == '__main__':
     # THRESHOLD = 0.80 означает, что 80% черных линий символов должны совпасть при наложении
-    compare_symbols_with_shift_tolerance('EXAMPLE.bmp', 'ov2640_frame_binarized.bmp', threshold=0.80)
+    compare_symbols_with_shift_tolerance('example.bmp', 'ov2640_frame_binarized.bmp', threshold=0.80)
     input()

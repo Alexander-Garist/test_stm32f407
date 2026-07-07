@@ -41,57 +41,45 @@ void DEBUG_Save_File(uint8_t *buffer, uint32_t size, const char* filename)
 *       Сохранить в бинарный файл значения яркости всех пикселей */
 void RELEASE_Save_File(uint8_t *buffer, uint32_t size, const char* filename)
 {
-    GPIO_set_HIGH(GPIOD, 13);
-    USART_Transmit(USART2, (char*)filename, strlen(filename));  // Отправка названия бинарного файла по USART2
-
-    USART_Transmit(USART2, (char*)'\r', 1);
-    USART_Transmit(USART2, (char*)'\n', 1);
-
-    USART_Transmit(USART2, (char*)buffer, size);                // Отправка кадра по USART2
-    GPIO_set_LOW(GPIOD, 13);
+    USART_Transmit(USART2, (char*)buffer, size);
 }
 
 /**********************************************************************************************************************/
-// Поиск среднего значения массива
-static float get_average_value(uint8_t* buffer, uint32_t size)
-{
-    float average_value = 0.0f; // Среднее значение массива данных
-    float sum = 0.0f;           // Сумма элементов массива
-
-    for (size_t index = 0; index < size; index++)
-    {
-        sum += *(buffer + index);
-    }
-
-    average_value = (float)sum / (float)size; // Целая часть
-    return average_value;
-}
-
-// Поиск отклонения от среднего
-static float deviation_from_average(uint8_t value, float average)
-{
-    return (float)value - average;
-}
-
-// сумма квадратов отклонений
-static float sum_squares_deviations(float* array_deviations)
-{
-    float sum = 0.0f;
-
-    // массив отклонений заменяется массивом квадратов отклонений
-    for (uint32_t index = 0; index < CAM_FRAME_BYTES; index++)
-    {
-        sum += array_deviations[index] * array_deviations[index];
-    }
-
-    return sum;
-}
+//// Поиск среднего значения массива
+//static float get_average_value(uint8_t* buffer, uint32_t size)
+//{
+//    float average_value = 0.0f; // Среднее значение массива данных
+//    float sum = 0.0f;           // Сумма элементов массива
+//
+//    for (size_t index = 0; index < size; index++)
+//    {
+//        sum += *(buffer + index);
+//    }
+//
+//    average_value = (float)sum / (float)size; // Целая часть
+//    return average_value;
+//}
+//
+//// Поиск отклонения от среднего
+//static float deviation_from_average(uint8_t value, float average)
+//{
+//    return (float)value - average;
+//}
+//
+//// сумма квадратов отклонений
+//static float sum_squares_deviations(float* array_deviations)
+//{
+//    float sum = 0.0f;
+//
+//    // массив отклонений заменяется массивом квадратов отклонений
+//    for (uint32_t index = 0; index < CAM_FRAME_BYTES; index++)
+//    {
+//        sum += array_deviations[index] * array_deviations[index];
+//    }
+//
+//    return sum;
+//}
 /**********************************************************************************************************************/
-
-
-float deviation_X[CAM_FRAME_BYTES], deviation_Y[CAM_FRAME_BYTES];             // массивы отклонений от средних значений
-float correlation_coefficient;
-
 
 
 int main(void)
@@ -180,15 +168,6 @@ int main(void)
 //   float correlation_coefficient = numerator / denominator;
 */
 
-    // создание образца изображения
-    ov2640_capture_snapshot(frame_example, CAM_WIDTH, CAM_HEIGHT);
-    ov2640_capture_snapshot(frame_example, CAM_WIDTH, CAM_HEIGHT);
-    ov2640_capture_snapshot(frame_example, CAM_WIDTH, CAM_HEIGHT);
-    ov2640_capture_snapshot(frame_example, CAM_WIDTH, CAM_HEIGHT);
-    ov2640_capture_snapshot(frame_example, CAM_WIDTH, CAM_HEIGHT);                  // Исходный снимок образца
-    ImageProcessing_increase_image_contrast(frame_example, CAM_FRAME_BYTES);        // Образец после повышения контрастности
-    ImageProcessing_binarize_adaptive_local(frame_example, CAM_WIDTH, CAM_HEIGHT);  // Образец после бинаризации
-    DEBUG_Save_File(frame_example, CAM_FRAME_BYTES, "EXAMPLE.bin");
 
     while(1)
     {
@@ -202,58 +181,20 @@ int main(void)
             GPIO_set_LOW(GPIOD, 14);
 
             DEBUG_Save_File(camera_buffer, CAM_FRAME_BYTES, "ov2640_frame.bin");  // Отправить на ПК сходный снимок камеры  (отправляется в любом случае по нажатию кнопки)
-            //RELEASE_Save_File(camera_buffer, CAM_FRAME_BYTES, "ov2640_frame.bin");  // Отправка кадра по USART2
 
             // Отправить на ПК снимок с повышенной контрастностью
             if (get_high_contrast_frame)
             {
                 ImageProcessing_increase_image_contrast(camera_buffer, CAM_FRAME_BYTES);            // Повышение контрастности изображения (изображение получается хорошее, четкое)
-
                 DEBUG_Save_File(camera_buffer, CAM_FRAME_BYTES, "ov2640_frame_high_contrast.bin");  // Кадр после повышения контрастности
-                //RELEASE_Save_File(camera_buffer, CAM_FRAME_BYTES, "ov2640_frame_high_contrast.bin");  // Кадр после повышения контрастности
             }
 
             // Отправить на ПК ЧБ снимок
             if (get_binarized_frame)
             {
-                //ImageProcessing_binarize_image(camera_buffer, CAM_FRAME_BYTES);                     // Бинаризация изображения
                 ImageProcessing_binarize_adaptive_local(camera_buffer, CAM_WIDTH, CAM_HEIGHT);
-
                 DEBUG_Save_File(camera_buffer, CAM_FRAME_BYTES, "ov2640_frame_binarized.bin");      // Кадр после бинаризации изображения
-                //RELEASE_Save_File(camera_buffer, CAM_FRAME_BYTES, "ov2640_frame_binarized.bin");      // Кадр после бинаризации изображения
             }
-
-                float average_X = get_average_value(frame_example, CAM_FRAME_BYTES);   // среднее значение исходного массива X
-                float average_Y = get_average_value(camera_buffer, CAM_FRAME_BYTES);   // среднее значение исходного массива Y
-
-                for (uint32_t index = 0; index < CAM_FRAME_BYTES; index++)
-                {
-                    deviation_X[index] = deviation_from_average(frame_example[index], average_X);
-                }
-
-                for (uint32_t index = 0; index < CAM_FRAME_BYTES; index++)
-                {
-                    deviation_Y[index] = deviation_from_average(camera_buffer[index], average_Y);
-                }
-
-                // Произведение отклонений
-                float numerator = 0.0f; // числитель коэффициента корреляции
-
-                for (uint32_t index = 0; index < CAM_FRAME_BYTES; index++)
-                {
-                    numerator += deviation_X[index] * deviation_Y[index];
-                }
-
-                // подсчет сумм квадратов отклонений
-                float sum_squares_X = sum_squares_deviations(deviation_X);
-                float sum_squares_Y = sum_squares_deviations(deviation_Y);
-
-                // знаменатель формулы
-               float denominator = sqrt(sum_squares_X * sum_squares_Y);
-               correlation_coefficient = numerator / denominator;
-
-               if (correlation_coefficient >= 0.85f) GPIO_set_HIGH(GPIOD, 12);
-               else GPIO_set_HIGH(GPIOD, 14);
 
             Interrupt_EXTI0_Occured = 0;
         }
