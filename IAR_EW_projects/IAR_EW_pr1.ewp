@@ -2226,6 +2226,12 @@
         </file>
     </group>
     <file>
+        <name>$PROJ_DIR$\flash.c</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\flash.h</name>
+    </file>
+    <file>
         <name>$PROJ_DIR$\image_processing.c</name>
     </file>
     <file>

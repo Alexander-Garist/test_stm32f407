@@ -6,8 +6,8 @@
 #define RESOLUTION_X    800
 #define RESOLUTION_Y    400
 
-#define CAM_WIDTH        (RESOLUTION_X / 2)         // в 1 строке 800 байт €ркости и цветности, нужна только €ркость дл€ „Ѕ
-#define CAM_HEIGHT       (RESOLUTION_Y / 2)         // захватываетс€ только нечетна€ строка, тк четна€ темна€
+#define CAM_WIDTH        800//(RESOLUTION_X / 2)         // в 1 строке 800 байт €ркости и цветности, нужна только €ркость дл€ „Ѕ
+#define CAM_HEIGHT       600//(RESOLUTION_Y / 2)         // захватываетс€ только нечетна€ строка, тк четна€ темна€
 #define CAM_FRAME_BYTES  (CAM_WIDTH * CAM_HEIGHT)   // размер массива дл€ €ркости пикселей 1 кадра
 
 #define VSYNC_PORT      GPIOB
@@ -35,13 +35,16 @@ ov2640_reg_t;
 
 
 /** ѕолучить ID камеры */
-void ov2640_Read_ID(uint8_t device_address);
+void ov2640_Read_ID_Master_Mode(uint8_t device_address);
 
 /** —брос камеры перед работой */
-void ov2640_Reset();
+void ov2640_Reset_Master_Mode();
 
 /** »нициализаци€ камеры: запись регистров по I2C */
-void ov2640_Init(uint8_t device_address);
+void ov2640_Init_Master_Mode(uint8_t device_address);
+
+// перевод камеры в режим тактировани€ от внешнего процессора
+void ov2640_Init_Slave_Mode(uint8_t device_address);
 
 
 /** «ахват кадра камеры
@@ -49,9 +52,26 @@ void ov2640_Init(uint8_t device_address);
 * нужно забрать байты €ркости (только нечетные) из каждой строки
 * окно по высоте: строки от 175 до 425, остальные игнорируютс€
 */
-int ov2640_capture_snapshot(uint8_t *buffer, int width, int height);
+int ov2640_capture_snapshot_Master_Mode(uint8_t *buffer, int width, int height);
+
+/** «ахват кадра + бинаризаци€ на лету + упаковка в сжатый массив */
+int ov2640_capture_and_process_Master_Mode(uint8_t *packed_buffer,  // упакованный бинарный кадр
+                                           int width, int height,   // размеры кадра
+                                           uint8_t get_binary);      // флаг "нужно выполнить бинаризацию"
+
+
+///** «ахват кадра + бинаризаци€ на лету + упаковка в сжатый массив */
+//int ov2640_capture_and_process_Master_Mode(uint8_t *buffer,         // исходный кадр
+//                                           uint8_t *packed_buffer,  // упакованный бинарный кадр
+//                                           int width, int height,   // размеры кадра
+//                                           uint8_t get_binary);      // флаг "нужно выполнить бинаризацию"
+
+
+
+/** «ахват кадра камеры SLAVE_MODE */
+int ov2640_capture_snapshot_Slave_Mode(uint8_t *buffer, int width, int height);
 
 /** ќпределить длительность кадра, длительность строки, количество строк и количество байт в строке */
-void ov2640_count_pixels_in_frame();
+void ov2640_count_pixels_in_frame_Master_Mode();
 
 #endif /* __OV2640_H__ */
