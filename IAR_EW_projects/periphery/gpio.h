@@ -170,5 +170,6 @@ void GPIO_Enable_TIM_3_4_5(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
 
 // Конфигурация пинов ввода для работы с КМОП-камерой
 void GPIO_Camera_Input_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
+void GPIO_Camera_Output_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin);
 
 #endif /*__GPIO_H__ */

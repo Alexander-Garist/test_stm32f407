@@ -236,3 +236,10 @@ void GPIO_Camera_Input_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
     GPIO_RCC_Enable(GPIO_port);
     GPIO_init_INPUT(GPIO_port, GPIO_pin);
 }
+
+// Конфигурация пинов вывода для работы с КМОП-камерой
+void GPIO_Camera_Output_Enable(GPIO_TypeDef* GPIO_port, uint8_t GPIO_pin)
+{
+    GPIO_RCC_Enable(GPIO_port);
+    GPIO_init_OUTPUT(GPIO_port, GPIO_pin);
+}

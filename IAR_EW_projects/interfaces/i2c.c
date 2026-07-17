@@ -162,10 +162,12 @@ I2C_Status_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t I2C_device_addr, uint8_t* I2C_d
 	//Генерация состояния START и отправка запроса на чтение подключенному устройству
     if (I2C_Start(I2Cx, I2C_device_addr, 1) != I2C_OK) return I2C_ERROR_START;
 
-    if (I2C_size > 1){
+    if (I2C_size > 1)
+    {
         I2Cx->CR1 |= I2C_CR1_ACK;        //Чтение нескольких байт, установка Acknowledge Enable
     }
-    else{
+    else
+    {
         I2Cx->CR1 &= ~I2C_CR1_ACK;      //Одиночное чтение, сброс Acknowledge Enable
     }
     (void)I2Cx->SR2;

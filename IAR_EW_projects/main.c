@@ -7,17 +7,30 @@
 #include "i2c.h"
 #include "exti.h"
 #include "usart.h"
+#include "button.h"
 
 #include "ov2640.h"
-//#include "image_processing.h"
+#include "image_processing.h"
 #include "flash.h"
 
-uint8_t camera_packed_buffer[CAM_FRAME_BYTES / 8];  // 800 * 600 / 8 = 60000 байт
+//uint8_t camera_packed_buffer[CAM_FRAME_BYTES / 8];  // 800 * 600 / 8 = 60000 байт
+
+
+uint8_t camera_frame_fragment0[CAM_FRAME_BYTES / 5];
+uint8_t camera_frame_fragment1[CAM_FRAME_BYTES / 5];
+uint8_t camera_frame_fragment2[CAM_FRAME_BYTES / 5];
+uint8_t camera_frame_fragment3[CAM_FRAME_BYTES / 5];
+uint8_t camera_frame_fragment4[CAM_FRAME_BYTES / 5];
+
+
 
 uint32_t lines_processed = 0;
 
-uint8_t camera_restart = 0;             // Сброс и повторная инициализация камеры (если камера ослепла после смены освещения ее достаточно сбросить и она все видит)
-uint32_t frame_counter = 0;
+uint8_t camera_restart = 0;         // Сброс и повторная инициализация камеры (если камера ослепла после смены освещения ее достаточно сбросить и она все видит)
+uint8_t save_frame_to_FLASH = 0;    // Флаг, по которому образец запишется в Flash память
+
+float comparison_result = 0.0f; // результат сравнения текущего кадра с образцом в памяти
+
 
 /** Вариант для отладки
 *       Сохранить в бинарный файл значения яркости всех пикселей */
@@ -54,7 +67,7 @@ int main(void)
 
     {   // Настройка выводов, подключенных к камере
     // Входы синхронизации
-    GPIO_Camera_Input_Enable(GPIOD, 11);    // VSYNC
+    GPIO_Camera_Input_Enable(GPIOB, 5);    // VSYNC
     GPIO_Camera_Input_Enable(GPIOC, 9);     // HREF
     GPIO_Camera_Input_Enable(GPIOC, 10);    // DCLK
 
@@ -89,32 +102,120 @@ int main(void)
     }
 /**********************************************************************************************************************/
     // Сброс и инициализация OV2640
-    ov2640_Init_Master_Mode(0x30);
-
-    //ov2640_Init_Slave_Mode(0x30);
+    ov2640_Init(0x30);
 /**********************************************************************************************************************/
+
+/*    // БПФ 64 точки
+    while (1)
+    {
+        double complex signal[64];      // Сигнал, который нужно разложить на спектр
+        double complex spectrum[64];    // Спектр исходного сигнала
+
+        // Генерируем тестовый сигнал: гармоника на частоте k=3
+        // Формула: x(n) = sin(2*pi*3*n/32)
+        for (int n = 0; n < 64; ++n)
+        {
+            double angle = 2.0 * M_PI * 3.0 * n / 64.0;
+            signal[n] = 1+sin(angle) + 0.0 * I;
+        }
+
+        fft64(signal, spectrum);
+
+        printf("--- Точный спектр 64-точечного БПФ ---\n");
+        for (int k = 0; k < 64; ++k)
+        {
+            double re = creal(spectrum[k]);
+            double im = cimag(spectrum[k]);
+
+            // Убираем шумы окружения float чисел (все что меньше 1e-5 приравниваем к 0)
+            if (fabs(re) < 1e-5) re = 0.0;
+            if (fabs(im) < 1e-5) im = 0.0;
+
+            printf("X[%2d] = %8.4f %s %8.4fj\n", k, re, (im >= 0 ? "+" : "-"), fabs(im));
+        }
+    }
+*/
 
     while(1)
     {
-        frame_counter++;
+        ov2640_count_pixels_in_frame();
+        //int rec = ov2640_capture_and_process(camera_packed_buffer, CAM_WIDTH, CAM_HEIGHT, 1);   // захват кадра с обработкой на месте
+        int result0 = ov2640_capture_fragment(camera_frame_fragment0, CAM_WIDTH, CAM_HEIGHT);
+//        int result1 = ov2640_capture_fragment(camera_frame_fragment1, CAM_WIDTH, CAM_HEIGHT);
+//        int result2 = ov2640_capture_fragment(camera_frame_fragment2, CAM_WIDTH, CAM_HEIGHT);
+//        int result3 = ov2640_capture_fragment(camera_frame_fragment3, CAM_WIDTH, CAM_HEIGHT);
 
-        ov2640_count_pixels_in_frame_Master_Mode();
-        int rec = ov2640_capture_and_process_Master_Mode(camera_packed_buffer, CAM_WIDTH, CAM_HEIGHT, 1);
 
+        // По нажатию кнопки либо произойдет отправка текущего кадра на ПК, либо запись образца кадра в Flash память
         if (Interrupt_EXTI0_Occured)
         {
-            DEBUG_Save_File(camera_packed_buffer, CAM_FRAME_BYTES / 8, "ov2640_frame_binarized_packed.bin");
+            /** Запись образца снимка */
+            if (save_frame_to_FLASH)
+            {
+                GPIO_set_HIGH(GPIOD, 12);
+
+                //Save_To_Flash(FLASH_SECTOR_11_START_ADDRESS, camera_packed_buffer, CAM_FRAME_BYTES / 8);    // Записать образец в Flash
+                //DEBUG_Save_File(camera_packed_buffer, CAM_FRAME_BYTES / 8, "ov2640_frame_example.bin");     // ДЛЯ ОТЛАДКИ отправить кадр образца на ПК
+                save_frame_to_FLASH = 0;                                                                    // Сбросить флаг записи образца
+
+                GPIO_set_LOW(GPIOD, 12);
+            }
+            /** Получение обычного текущего снимка */
+            //DEBUG_Save_File(camera_packed_buffer, CAM_FRAME_BYTES / 8, "ov2640_frame_binarized_packed.bin");
             Interrupt_EXTI0_Occured = 0;
         }
 
         delay_ms(1000);
 
-        if (camera_restart || frame_counter == 5)
+        if (camera_restart)
         {
-            ov2640_Init_Master_Mode(0x30);
-            //ov2640_Init_Slave_Mode(0x30);
+            ov2640_Init(0x30);
             camera_restart = 0;
-            frame_counter = 0;
         }
     }
 }
+
+
+//while(1)
+//    {
+//        ov2640_count_pixels_in_frame();
+//        int rec = ov2640_capture_and_process(camera_packed_buffer, CAM_WIDTH, CAM_HEIGHT, 1);   // захват кадра с обработкой на месте
+//
+//        // По нажатию кнопки либо произойдет отправка текущего кадра на ПК, либо запись образца кадра в Flash память
+//        if (Interrupt_EXTI0_Occured)
+//        {
+//            /** Запись образца снимка */
+//            if (save_frame_to_FLASH)
+//            {
+//                GPIO_set_HIGH(GPIOD, 12);
+//
+//                Save_To_Flash(FLASH_SECTOR_11_START_ADDRESS, camera_packed_buffer, CAM_FRAME_BYTES / 8);    // Записать образец в Flash
+//                DEBUG_Save_File(camera_packed_buffer, CAM_FRAME_BYTES / 8, "ov2640_frame_example.bin");     // ДЛЯ ОТЛАДКИ отправить кадр образца на ПК
+//                save_frame_to_FLASH = 0;                                                                    // Сбросить флаг записи образца
+//
+//                GPIO_set_LOW(GPIOD, 12);
+//            }
+//            /** Получение обычного текущего снимка */
+//            DEBUG_Save_File(camera_packed_buffer, CAM_FRAME_BYTES / 8, "ov2640_frame_binarized_packed.bin");
+//            Interrupt_EXTI0_Occured = 0;
+//        }
+//
+//        delay_ms(1000);
+//
+//        if (camera_restart)
+//        {
+//            ov2640_Init(0x30);
+//            camera_restart = 0;
+//        }
+//    }
+
+
+
+
+
+
+
+
+
+
+

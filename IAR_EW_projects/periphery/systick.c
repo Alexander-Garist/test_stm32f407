@@ -218,16 +218,24 @@ void Clock_Config_168MHz_HSI(void)
     RCC->CFGR &= ~(RCC_CFGR_HPRE | RCC_CFGR_PPRE1 | RCC_CFGR_PPRE2);
 
     RCC->CFGR |= RCC_CFGR_HPRE_DIV1;  // AHB = 168 МГц
-    RCC->CFGR |= RCC_CFGR_PPRE2_DIV2; // APB2 = 84 МГц (макс)
-    RCC->CFGR |= RCC_CFGR_PPRE1_DIV4; // APB1 = 42 МГц (макс)
+    RCC->CFGR |= RCC_CFGR_PPRE2_DIV2; // APB2 = 84 МГц (макс) => делитель 2   если AHB == 72 МГц, то APB2 может быть == 72 МГц (делитель 1)
+    RCC->CFGR |= RCC_CFGR_PPRE1_DIV4; // APB1 = 42 МГц (макс) => делитель 4   если AHB == 72 МГц, то APB1 может быть == 36 МГц (делитель 2)
 
-    // 5. Конфигурация PLL: M=16, N=336, P=2 (00), Q=7
+/** 5. Конфигурация PLL:
+*       По даташиту есть формулы: (стр 228)
+*   Частота осциллятора (VCO) = частота на воде PLL (частота источника, HSI==16 МГц) *PLLN/PLLM
+*   Частота на выходе PLL = частота осциллятора / PLLP
+*   Частота USB, SDIO, RNG = частота осциллятора / PLLQ
+*
+*   Для каждого модуля есть допустимые частоты, для этого настраиваются делители частоты
+*/
+
     // Сброс и запись
-    RCC->PLLCFGR = (16 << RCC_PLLCFGR_PLLM_Pos) |
-                   (336 << RCC_PLLCFGR_PLLN_Pos) |
-                   (0 << RCC_PLLCFGR_PLLP_Pos) |   // 00 означает делитель 2
-                   (7 << RCC_PLLCFGR_PLLQ_Pos) |   // Для USB/SDIO
-                   RCC_PLLCFGR_PLLSRC_HSI;         // Источник HSI
+    RCC->PLLCFGR = (16 << RCC_PLLCFGR_PLLM_Pos)  |
+                   (336 << RCC_PLLCFGR_PLLN_Pos) |  // Множитель частоты осциллятора (может быть от 50 до 432)
+                   (0 << RCC_PLLCFGR_PLLP_Pos)   |  // Делитель 2 для системного таймера
+                   (7 << RCC_PLLCFGR_PLLQ_Pos)   |  // Делитель 7 для USB и SDIO
+                   RCC_PLLCFGR_PLLSRC_HSI;          // PLLSRC: HSI
 
     // 6. Включение PLL и ожидание фиксации (Lock)
     RCC->CR |= RCC_CR_PLLON;

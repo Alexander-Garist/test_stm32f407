@@ -2,18 +2,16 @@ from PIL import Image
 import os
 
 # ==================== НАСТРОЙКИ СНИМКА ====================
-INPUT_BIN_FILE = 'ov2640_frame_binarized_packed.bin'  # Имя вашего файла 10 КБ
-OUTPUT_BMP_FILE = 'result_unpacked.bmp'        # Выходной ЧБ файл
 WIDTH = 800
 HEIGHT = 600
-EXPECTED_SIZE = (WIDTH * HEIGHT) // 8 # 10 000 байт
+EXPECTED_SIZE = (WIDTH * HEIGHT) // 8 # 60 000 байт
 
-def unpack_static_file():
-    if not os.path.exists(INPUT_BIN_FILE):
-        print(f"Ошибка: Файл '{INPUT_BIN_FILE}' не найден в папке скрипта!")
+def unpack_static_file(bin_filename, bmp_filename):
+    if not os.path.exists(bin_filename):
+        print(f"Ошибка: Файл '{bin_filename}' не найден в папке скрипта!")
         return
 
-    with open(INPUT_BIN_FILE, 'rb') as f:
+    with open(bin_filename, 'rb') as f:
         packed_bytes = f.read()
 
     print(f"Прочитано из файла: {len(packed_bytes)} байт.")
@@ -34,9 +32,10 @@ def unpack_static_file():
                 
     # Создание графического файла
     img = Image.frombytes('L', (WIDTH, HEIGHT), bytes(unpacked_pixels))
-    img.save(OUTPUT_BMP_FILE)
+    img.save(bmp_filename)
     img.show()
-    print(f"Успешно распаковано в '{OUTPUT_BMP_FILE}'")
+    print(f"Успешно распаковано в '{bmp_filename}'")
 
 if __name__ == '__main__':
-    unpack_static_file()
+    unpack_static_file('ov2640_frame_binarized_packed.bin', 'result_frame.bmp')
+    #unpack_static_file('ov2640_frame_example.bin', 'result_example.bmp')
