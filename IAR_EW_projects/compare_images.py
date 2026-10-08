@@ -2,8 +2,8 @@ import cv2
 from skimage.metrics import structural_similarity as ssim
 
 # 1. Загрузка изображений (как 8-битные серая шкала)
-img_ideal = cv2.imread('EXAMPLE.bmp', cv2.IMREAD_GRAYSCALE)
-img_current = cv2.imread('ov2640_frame_binarized.bmp', cv2.IMREAD_GRAYSCALE)
+img_ideal = cv2.imread('example.bmp', cv2.IMREAD_GRAYSCALE)
+img_current = cv2.imread('result_frame.bmp', cv2.IMREAD_GRAYSCALE)
 
 # 2. Свертка: размытие по Гауссу для устранения шума и микро-сдвигов
 blur_ideal = cv2.GaussianBlur(img_ideal, (5, 5), 0)

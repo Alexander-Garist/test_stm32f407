@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-#define CAM_WIDTH        800
-#define CAM_HEIGHT       600
-#define CAM_FRAME_BYTES  (CAM_WIDTH * CAM_HEIGHT)   // размер массива для яркости пикселей 1 кадра
+#define CAM_WIDTH        800                        // Высота кадра, который выдает камера
+#define CAM_HEIGHT       600                        // Ширина кадра, который выдает камера
+#define CAM_FRAME_BYTES  (CAM_WIDTH * CAM_HEIGHT)   // Размер массива для яркости пикселей 1 кадра
 
 #define VSYNC_PORT      GPIOB
 #define VSYNC_PIN       (1 << 5)
@@ -21,8 +21,6 @@
 
 #define DATA_PORT       GPIOE
 
-
-
 typedef struct
 {
     uint8_t reg;
@@ -30,45 +28,13 @@ typedef struct
 }
 ov2640_reg_t;
 
-
-/** Получить ID камеры */
-void ov2640_Read_ID(uint8_t device_address);
-
-/** Сброс камеры перед работой */
-void ov2640_Reset();
-
 /** Инициализация камеры: запись регистров по I2C */
 void ov2640_Init(uint8_t device_address);
-
-
-/** Захват кадра камеры
-* в кадре 600 строк по 800 байт в каждой строке
-* нужно забрать байты яркости (только нечетные) из каждой строки
-* окно по высоте: строки от 175 до 425, остальные игнорируются
-*/
-int ov2640_capture_snapshot(uint8_t *buffer, int width, int height);
-
-/** Захват кадра + бинаризация на лету + упаковка в сжатый массив */
-int ov2640_capture_and_process(uint8_t *packed_buffer,  // упакованный бинарный кадр
-                                           int width, int height,   // размеры кадра
-                                           uint8_t get_binary);      // флаг "нужно выполнить бинаризацию"
-
-
-///** Захват кадра + бинаризация на лету + упаковка в сжатый массив */
-//int ov2640_capture_and_process(uint8_t *buffer,                     // исходный кадр
-//                                           uint8_t *packed_buffer,  // упакованный бинарный кадр
-//                                           int width, int height,   // размеры кадра
-//                                           uint8_t get_binary);     // флаг "нужно выполнить бинаризацию"
-
-
-/** Захват кадра по частям */
-int ov2640_capture_fragment(uint8_t *buffer, int width, int height);
-
-
-
 
 /** Определить длительность кадра, длительность строки, количество строк и количество байт в строке */
 void ov2640_count_pixels_in_frame();
 
+/** Захват кадра + бинаризация на лету + упаковка в сжатый массив  БЕЗ СОХРАНЕНИЯ ИСХОДНОГО КАДРА*/
+int ov2640_capture_and_process(uint8_t *packed_buffer, int width, int height);
 
 #endif /* __OV2640_H__ */

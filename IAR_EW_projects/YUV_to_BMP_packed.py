@@ -2,9 +2,9 @@ from PIL import Image
 import os
 
 # ==================== НАСТРОЙКИ СНИМКА ====================
-WIDTH = 800
-HEIGHT = 600
-EXPECTED_SIZE = (WIDTH * HEIGHT) // 8 # 60 000 байт
+WIDTH = 400
+HEIGHT = 300
+EXPECTED_SIZE = (WIDTH * HEIGHT) // 8
 
 def unpack_static_file(bin_filename, bmp_filename):
     if not os.path.exists(bin_filename):
@@ -17,7 +17,7 @@ def unpack_static_file(bin_filename, bmp_filename):
     print(f"Прочитано из файла: {len(packed_bytes)} байт.")
 
     if len(packed_bytes) != EXPECTED_SIZE:
-        print(f"Ошибка: Вес файла не равен 10 000 байт (реальный размер: {len(packed_bytes)}).")
+        print(f"Ошибка: Вес файла не равен 30 000 байт (реальный размер: {len(packed_bytes)}).")
         return
 
     # РАСПАКОВКА БИТ С СОХРАНЕНИЕМ ПОРЯДКА (MSB-first)

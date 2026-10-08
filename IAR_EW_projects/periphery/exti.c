@@ -24,15 +24,13 @@ static void EXTI_InitPin(EXTI_Port EXTI_port, uint32_t EXTI_pin, uint32_t EXTI_t
 		Пины 0,1,2,3 определяются регистром EXTICR[0]
 		Пины 4,5,6,7 определяются регистром EXTICR[1]
 		Пины 8,9,10,11 определяются регистром EXTICR[2]
-		Пины 12,13,14,15 определяются регистром EXTICR[3]
-	*/
+		Пины 12,13,14,15 определяются регистром EXTICR[3] */
 	uint32_t EXTI_CR_INDEX = EXTI_pin / 4;
 
 	/** Конкретный бит в регистре
 		Определение порта, на котором будут обрабатываться внешние прерывания (A, B, C и т.д.)
 		например порт D (0x03): вместо #define SYSCFG_EXTICR2_EXTI5_PD  ((uint16_t)0x0030) // PD[5] EXTI_pin
-		пин 5: (5 % 4)*4 = 4, значит  0x03 сдвиг на 4 позиции влево, получается 0x30
-	*/
+		пин 5: (5 % 4)*4 = 4, значит  0x03 сдвиг на 4 позиции влево, получается 0x30 */
 	uint32_t EXTI_CR_POSITION = (EXTI_pin % 4) * 4;
 
     SYSCFG->EXTICR[EXTI_CR_INDEX] &= ~(0xF << EXTI_CR_POSITION);		// Начальное обнуление всех битов
@@ -55,7 +53,8 @@ static void EXTI_EnableIRQ(uint32_t EXTI_pin)
 {
     EXTI->IMR |= (1 << EXTI_pin);
 
-    switch(EXTI_pin) {
+    switch(EXTI_pin)
+    {
         case 0:
             NVIC_EnableIRQ(EXTI0_IRQn);
             break;
@@ -94,7 +93,8 @@ static void EXTI_DisableIRQ(uint32_t EXTI_pin)
 {
     EXTI->IMR &= ~(1 << EXTI_pin);
 
-    switch(EXTI_pin) {
+    switch(EXTI_pin)
+    {
         case 0:
             NVIC_DisableIRQ(EXTI0_IRQn);
             break;

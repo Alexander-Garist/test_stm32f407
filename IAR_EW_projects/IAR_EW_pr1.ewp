@@ -353,6 +353,7 @@
                     <state>$PROJ_DIR$/periphery</state>
                     <state>$PROJ_DIR$/interfaces</state>
                     <state>$PROJ_DIR$/Soft_SWD</state>
+                    <state>$PROJ_DIR$/devices</state>
                     <state>$PROJ_DIR$</state>
                 </option>
                 <option>
@@ -2226,10 +2227,34 @@
         </file>
     </group>
     <file>
+        <name>$PROJ_DIR$\devices\7_segment_indicator.c</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\devices\7_segment_indicator.h</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\devices\AD9833.c</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\devices\AD9833.h</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\devices\BL24CM1A.c</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\devices\BL24CM1A.h</name>
+    </file>
+    <file>
         <name>$PROJ_DIR$\flash.c</name>
     </file>
     <file>
         <name>$PROJ_DIR$\flash.h</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\devices\FM25Q08B.c</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\devices\FM25Q08B.h</name>
     </file>
     <file>
         <name>$PROJ_DIR$\image_processing.c</name>

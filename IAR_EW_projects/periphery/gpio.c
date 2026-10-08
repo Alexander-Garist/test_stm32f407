@@ -7,6 +7,53 @@
 #include "gpio.h"
 #include "systick.h"
 
+/******************************* попытка сделать функцию инициализации более компактной *******************************/
+//typedef struct
+//{
+//    GPIO_TypeDef * port;
+//    uint8_t pin;
+//    uint8_t moder;
+//    uint8_t otyper;
+//    uint8_t ospeedr;
+//    uint8_t pupdr;
+//    uint8_t afr;
+//}GPIO_Init_t;
+//
+//static void GPIO_init(GPIO_Init_t * gpio_init)
+//{
+//	// Начальный сброс всех регистров GPIO выбранного пина
+//    gpio_init->port->MODER  &= ~(0x3 << (gpio_init->pin * 2));
+//    gpio_init->port->OTYPER &= ~(0x1 << gpio_init->pin);
+//    gpio_init->port->OSPEEDR &= ~(0x3 << (gpio_init->pin * 2));
+//    gpio_init->port->PUPDR  &= ~(0x3 << (gpio_init->pin * 2));
+//    gpio_init->port->AFR[0] &= ~(0xF << (gpio_init->pin * 4));
+//    gpio_init->port->AFR[1] &= ~(0xF << (gpio_init->pin * 4));
+//
+//    // Установка значений регистров GPIO выбранного пина
+//    gpio_init->port->MODER  |= (gpio_init->moder << (gpio_init->pin * 2));
+//	gpio_init->port->OTYPER |= (gpio_init->otyper << gpio_init->pin);
+//    gpio_init->port->OSPEEDR |= (gpio_init->ospeedr << (gpio_init->pin * 2));
+//	gpio_init->port->PUPDR  |= (gpio_init->pupdr << (gpio_init->pin * 2));
+//
+//    // Только если в регистре MODER выбрана альтернативная функция происходит настройка регистра AFR
+//    if (gpio_init->moder == MODER_AF)
+//    {
+//        if (gpio_init->pin < 8) gpio_init->port->AFR[0] |= (gpio_init->afr << (gpio_init->pin * 4));
+//        if (gpio_init->pin >= 8) gpio_init->port->AFR[1] |= (gpio_init->afr << (gpio_init->pin * 4));
+//    }
+//}
+/**********************************************************************************************************************/
+
+
+
+
+
+
+
+
+
+
+
 /******************************************* Статические функции ******************************************************/
 
 // Включение тактирования порта GPIO
